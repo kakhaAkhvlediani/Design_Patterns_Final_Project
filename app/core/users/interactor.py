@@ -48,3 +48,25 @@ class IUserRepository(Protocol):
 
     def get_max_user_id(self) -> int:
         pass
+
+
+@dataclass
+class UsersInteractor:
+    _users_repository: IUserRepository
+
+    def register_user(self, username: str, password: str) -> Optional[User]:
+        new_user_id: int = self._users_repository.get_max_user_id()
+        new_user: User = User(
+            _user_id=new_user_id, _username=username, _password=password
+        )
+        is_new_user: bool = self._users_repository.add_user(new_user=new_user)
+        return new_user if is_new_user else None
+
+    def get_user(self, username: str) -> Optional[User]:
+        return self._users_repository.get_user_by_username(username=username)
+
+    def get_user_by_id(self, user_id: int) -> Optional[User]:
+        return self._users_repository.get_user_by_id(user_id)
+
+    def get_all_users(self) -> List[User]:
+        return self._users_repository.get_all_users()
