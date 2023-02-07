@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Dict, List, Protocol
 
 
 @dataclass
@@ -38,3 +38,14 @@ class Transaction:
             "amount": self.amount,
             "fee": self.fee,
         }
+
+
+class ITransactionsRepository(Protocol):
+    def add_transaction(self, transaction: Transaction) -> None:
+        pass
+
+    def get_wallet_transactions(self, address: str) -> List[Transaction]:
+        pass
+
+    def get_all_transactions(self) -> List[Transaction]:
+        pass
