@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Protocol
 
 
 @dataclass
@@ -31,3 +31,20 @@ class User:
             "username": self.get_username(),
             "password": self.get_password(),  # TODO maybe better to delete
         }
+
+
+class IUserRepository(Protocol):
+    def add_user(self, new_user: User) -> bool:
+        pass
+
+    def get_user_by_username(self, username: str) -> Optional[User]:
+        pass
+
+    def get_user_by_id(self, user_id: int) -> Optional[User]:
+        pass
+
+    def get_all_users(self) -> List[User]:
+        pass
+
+    def get_max_user_id(self) -> int:
+        pass
