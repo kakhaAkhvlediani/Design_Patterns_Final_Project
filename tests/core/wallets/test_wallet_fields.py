@@ -30,3 +30,7 @@ def test_equals_method(wallet: Wallet) -> None:
         _address="wallet_address_1",
         _balance_btc=10.7,
     )
+
+
+def test_equals_method_neg(wallet: Wallet) -> None:
+    assert wallet != wallet.to_dict()

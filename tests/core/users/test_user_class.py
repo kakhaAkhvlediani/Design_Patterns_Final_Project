@@ -131,3 +131,7 @@ def test_user_to_dict_neg_extra_field(user: User) -> None:
         "password": user.get_password(),
         "api_key": "admin_api_key",
     }
+
+
+def test_user_equals_on_other_object(user: User) -> None:
+    assert user != user.to_dict()

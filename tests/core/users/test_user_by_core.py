@@ -118,3 +118,14 @@ def test_password_gets_hashed_correctly(
     hashed_password = hasher(user.get_password())
 
     assert user_from_database.get_password() == hashed_password
+
+
+def test_register_user_changes(core: BitcoinWalletCore, user: User) -> None:
+    core.register_user(username=user.get_username(), password=user.get_password())
+
+    get_user1: User = core.get_user(username=user.get_username())
+
+    assert user != get_user1
+    assert user.get_user_id() == get_user1.get_user_id()
+    assert user.get_username() == get_user1.get_username()
+    assert user.get_password() != get_user1
