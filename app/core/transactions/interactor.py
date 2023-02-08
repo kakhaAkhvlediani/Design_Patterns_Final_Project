@@ -49,3 +49,22 @@ class ITransactionsRepository(Protocol):
 
     def get_all_transactions(self) -> List[Transaction]:
         pass
+
+
+@dataclass
+class TransactionsInteractor:
+    _transactions_repository: ITransactionsRepository
+
+    def make_transaction(
+        self, from_address: str, to_address: str, amount: float, fee: float
+    ) -> None:
+        transaction: Transaction = Transaction(
+            from_address=from_address, to_address=to_address, amount=amount, fee=fee
+        )
+        self._transactions_repository.add_transaction(transaction)
+
+    def get_transactions_of_wallet(self, address: str) -> List[Transaction]:
+        return self._transactions_repository.get_wallet_transactions(address=address)
+
+    def get_all_transactions(self) -> List[Transaction]:
+        return self._transactions_repository.get_all_transactions()
