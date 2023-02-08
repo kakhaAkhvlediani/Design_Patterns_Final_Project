@@ -50,6 +50,15 @@ class TransactionResponse:
     msg: str
 
 
+@dataclass
+class StatisticsResponse:
+    status: int
+    msg: str = ""
+    platform_profit_in_btc: float = 0
+    platform_profit_in_usd: float = 0
+    total_number_of_transactions: int = 0
+
+
 class IFeeRateStrategy(Protocol):
     def get_fee_rate_for_different_owners(self) -> float:
         pass
@@ -408,4 +417,28 @@ class BitcoinWalletCore:
 
         return TransactionResponse(
             status=status.HTTP_201_CREATED, msg="Transaction was made"
+        )
+
+    # STATISTICS RESPONSE
+    def get_statistics(self, admin_api_key: str) -> StatisticsResponse:
+        if admin_api_key != self._get_admin_api_key():
+            return StatisticsResponse(
+                status=status.HTTP_403_FORBIDDEN, msg="Wrong admin_api_key"
+            )
+        transactions: List[
+            Transaction
+        ] = self._transactions_interactor.get_all_transactions()
+
+        platform_profit: float = 0
+        total_number_of_transactions: int = 0
+        for transaction in transactions:
+            total_number_of_transactions += 1
+            platform_profit += transaction.get_fee()
+
+        return StatisticsResponse(
+            status=status.HTTP_200_OK,
+            platform_profit_in_btc=platform_profit,
+            platform_profit_in_usd=platform_profit
+            * self._rate_provider.get_exchange_rate(),
+            total_number_of_transactions=total_number_of_transactions,
         )
