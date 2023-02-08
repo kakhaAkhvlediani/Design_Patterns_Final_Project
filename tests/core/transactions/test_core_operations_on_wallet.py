@@ -8,6 +8,7 @@ from app.infra.in_memory.in_memory_transactions_repository import (
 )
 from app.infra.in_memory.in_memory_users_repository import InMemoryUsersRepository
 from app.infra.in_memory.in_memory_wallets_repository import InMemoryWalletsRepository
+from app.infra.utils.fee_strategy import FeeRateStrategy
 from app.infra.utils.hasher import DefaultHashFunction
 from app.infra.utils.rate_provider import DefaultRateProvider
 
@@ -29,6 +30,7 @@ def core() -> BitcoinWalletCore:
         transactions_repository=transactions_repository,
         hash_function=DefaultHashFunction(),
         rate_provider=DefaultRateProvider(),
+        fee_strategy=FeeRateStrategy(),
     )
 
 

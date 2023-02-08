@@ -50,19 +50,32 @@ class TransactionResponse:
     msg: str
 
 
+class IFeeRateStrategy(Protocol):
+    def get_fee_rate_for_different_owners(self) -> float:
+        pass
+
+    def get_fee_rate_for_same_owner(self) -> float:
+        pass
+
+    def get_fee_rate_for_deposit(self) -> float:
+        pass
+
+    def get_fee_rate_for_withdraw(self) -> float:
+        pass
+
+
 @dataclass
 class BitcoinWalletCore:
     _users_interactor: UsersInteractor
     _wallets_interactor: WalletsInteractor
     _transactions_interactor: TransactionsInteractor
     _api_key_interactor: APIKeyInteractor
+
     _hash: IHasher
     _rate_provider: IRateProvider
+    _fee_strategy: IFeeRateStrategy
+
     _admin_api_key: str
-    _fee_rate_for_different_owners: float
-    _fee_rate_for_same_owner: float
-    _fee_rate_for_deposit: float
-    _fee_rate_for_withdraw: float
     _wallet_starting_balance: float
     _external_transaction_id: int
 
@@ -78,11 +91,8 @@ class BitcoinWalletCore:
         api_key_repository: IAPIKeysRepository,
         hash_function: IHasher,
         rate_provider: IRateProvider,
-        fee_rate_for_different_owners: float = 0.015,
-        fee_rate_for_same_owner: float = 0,
+        fee_strategy: IFeeRateStrategy,
         admin_api_key: str = "admin_api_key",
-        fee_rate_for_deposit: float = 0,
-        fee_rate_for_withdraw: float = 0,
         wallet_starting_balance: float = 1,
         external_transaction_id: int = -10,
     ) -> "BitcoinWalletCore":
@@ -99,11 +109,8 @@ class BitcoinWalletCore:
             ),
             _hash=hash_function,
             _rate_provider=rate_provider,
-            _fee_rate_for_different_owners=fee_rate_for_different_owners,
-            _fee_rate_for_same_owner=fee_rate_for_same_owner,
+            _fee_strategy=fee_strategy,
             _admin_api_key=admin_api_key,
-            _fee_rate_for_deposit=fee_rate_for_deposit,
-            _fee_rate_for_withdraw=fee_rate_for_withdraw,
             _wallet_starting_balance=wallet_starting_balance,
             _external_transaction_id=external_transaction_id,
         )
@@ -111,6 +118,9 @@ class BitcoinWalletCore:
     # USER RESPONSE
     def _generate_api_key(self, args: object) -> str:
         return "api_key_" + self._hash(args)
+
+    def _generate_wallet_address(self) -> str:
+        return "wallet_" + str(uuid.uuid4())[0:12]
 
     def get_user_id_by_api_key(self, api_key: str) -> int:
         return self._api_key_interactor.get_user_id_by_api_key(api_key)
@@ -138,8 +148,6 @@ class BitcoinWalletCore:
         )
 
     # Wallet RESPONSE
-    def _generate_wallet_address(self) -> str:
-        return "wallet_" + str(uuid.uuid4())[0:12]
 
     def _check_if_user_has_max_num_of_wallets(self, user_id: int) -> bool:
         return (
@@ -243,12 +251,12 @@ class BitcoinWalletCore:
     # Transaction RESPONSE
     def _get_fee(self, sender_id: int, receiver_id: int, amount: float) -> float:
         if sender_id == receiver_id:
-            return amount * self._fee_rate_for_same_owner
+            return amount * self._fee_strategy.get_fee_rate_for_same_owner()
         elif sender_id == self._external_transaction_id:
-            return amount * self._fee_rate_for_deposit
+            return amount * self._fee_strategy.get_fee_rate_for_deposit()
         elif receiver_id == self._external_transaction_id:
-            return amount * self._fee_rate_for_withdraw
-        return amount * self._fee_rate_for_different_owners
+            return amount * self._fee_strategy.get_fee_rate_for_withdraw()
+        return amount * self._fee_strategy.get_fee_rate_for_different_owners()
 
     def deposit(
         self, api_key: str, address: str, amount_in_usd: float
