@@ -1,7 +1,9 @@
 import hashlib
 import pickle
+from dataclasses import dataclass
 
 
+@dataclass
 class DefaultHashFunction:
     def use_my_hash(self, *args: object) -> str:
         encoded_password: bytes = pickle.dumps(args)
