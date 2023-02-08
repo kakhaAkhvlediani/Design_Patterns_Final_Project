@@ -13,6 +13,7 @@ def core() -> BitcoinWalletCore:
     repository: InMemoryRepository = InMemoryRepository()
     return BitcoinWalletCore.create(
         users_repository=repository,
+        api_key_interactor_repository=repository
     )
 
 
