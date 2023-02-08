@@ -6,6 +6,7 @@ from starlette import status
 
 from app.core.api_key.interactor import APIKeyInteractor, IAPIKeyRepository
 from app.core.users.interactor import UsersInteractor, IUserRepository, User
+from app.core.wallets.interactor import IWalletRepository, WalletsInteractor
 from app.infra.utils.hasher import DefaultHashFunction
 
 
@@ -27,6 +28,7 @@ class IHasher(Protocol):
 @dataclass
 class BitcoinWalletCore:
     _users_interactor: UsersInteractor
+    _wallets_interactor: WalletsInteractor
     _api_key_interactor: APIKeyInteractor
     _hash: IHasher
 
@@ -34,12 +36,14 @@ class BitcoinWalletCore:
     def create(
             cls,
             users_repository: IUserRepository,
-            api_key_interactor_repository: IAPIKeyRepository,
+            wallets_repository: IWalletRepository,
+            api_key_repository: IAPIKeyRepository,
             hash_function: IHasher = DefaultHashFunction(),
     ) -> "BitcoinWalletCore":
         return cls(
             _users_interactor=UsersInteractor(_users_repository=users_repository),
-            _api_key_interactor=APIKeyInteractor(_api_key_repository=api_key_interactor_repository),
+            _wallets_interactor=WalletsInteractor(_wallets_repository=wallets_repository),
+            _api_key_interactor=APIKeyInteractor(_api_key_repository=api_key_repository),
             _hash=hash_function,
         )
 
