@@ -2,12 +2,14 @@ import pytest
 
 from app.core.facade import BitcoinWalletCore, UserResponse, WalletResponse
 from app.core.users.interactor import User
-from app.infra.utils.hasher import DefaultHashFunction
-from app.infra.utils.rate_provider import DefaultRateProvider
-
 from app.infra.in_memory.in_memory_api_key_repository import InMemoryAPIKeyRepository
+from app.infra.in_memory.in_memory_transactions_repository import (
+    InMemoryTransactionsRepository,
+)
 from app.infra.in_memory.in_memory_users_repository import InMemoryUsersRepository
 from app.infra.in_memory.in_memory_wallets_repository import InMemoryWalletsRepository
+from app.infra.utils.hasher import DefaultHashFunction
+from app.infra.utils.rate_provider import DefaultRateProvider
 
 rate_provider: DefaultRateProvider = DefaultRateProvider()
 
@@ -17,12 +19,16 @@ def core() -> BitcoinWalletCore:
     users_repository: InMemoryUsersRepository = InMemoryUsersRepository()
     wallets_repository: InMemoryWalletsRepository = InMemoryWalletsRepository()
     api_key_repository: InMemoryAPIKeyRepository = InMemoryAPIKeyRepository()
-
+    transactions_repository: InMemoryTransactionsRepository = (
+        InMemoryTransactionsRepository()
+    )
     return BitcoinWalletCore.create(
         users_repository=users_repository,
         wallets_repository=wallets_repository,
         api_key_repository=api_key_repository,
+        transactions_repository=transactions_repository,
         hash_function=DefaultHashFunction(),
+        rate_provider=DefaultRateProvider(),
     )
 
 

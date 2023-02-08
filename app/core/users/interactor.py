@@ -33,7 +33,7 @@ class User:
         }
 
 
-class IUserRepository(Protocol):
+class IUsersRepository(Protocol):
     def add_user(self, new_user: User) -> bool:
         pass
 
@@ -52,7 +52,7 @@ class IUserRepository(Protocol):
 
 @dataclass
 class UsersInteractor:
-    _users_repository: IUserRepository
+    _users_repository: IUsersRepository
 
     def register_user(self, username: str, password: str) -> Optional[User]:
         new_user_id: int = self._users_repository.get_max_user_id()

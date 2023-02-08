@@ -36,7 +36,7 @@ class Wallet:
         return self._user_id
 
 
-class IWalletRepository(Protocol):
+class IWalletsRepository(Protocol):
     def add_wallet(self, wallet: Wallet) -> None:
         pass
 
@@ -58,7 +58,7 @@ class IWalletRepository(Protocol):
 
 @dataclass
 class WalletsInteractor:
-    _wallets_repository: IWalletRepository
+    _wallets_repository: IWalletsRepository
 
     def create_wallet(
         self, user_id: int, address: str, balance_in_btc: float

@@ -25,10 +25,10 @@ class Transaction:
         if not isinstance(other, Transaction):
             return False
         return (
-                self.get_from_address() == other.get_from_address()
-                and self.get_to_address() == other.get_to_address()
-                and self.get_amount() == other.get_amount()
-                and self.get_fee() == other.get_fee()
+            self.get_from_address() == other.get_from_address()
+            and self.get_to_address() == other.get_to_address()
+            and self.get_amount() == other.get_amount()
+            and self.get_fee() == other.get_fee()
         )
 
     def to_dict(self) -> Dict[str, Any]:

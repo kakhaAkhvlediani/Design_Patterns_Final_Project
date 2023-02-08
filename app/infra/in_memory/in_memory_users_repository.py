@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import DefaultDict, Optional, List
+from typing import DefaultDict, List, Optional
 
 from app.core.users.interactor import User
 
@@ -33,4 +33,3 @@ class InMemoryUsersRepository:
 
     def get_max_user_id(self) -> int:
         return len(self._users)
-

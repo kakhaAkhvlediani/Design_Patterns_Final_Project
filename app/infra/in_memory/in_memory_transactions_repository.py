@@ -4,11 +4,11 @@ from typing import DefaultDict, List
 from app.core.transactions.interactor import Transaction
 
 
-class InMemoryAPIKeyRepository:
+class InMemoryTransactionsRepository:
     _transactions: DefaultDict[int, Transaction]
 
     def __init__(self) -> None:
-        self._api_keys_user_ids = defaultdict()
+        self._transactions = defaultdict()
 
     # TRANSACTION
     def add_transaction(self, transaction: Transaction) -> None:
@@ -18,8 +18,8 @@ class InMemoryAPIKeyRepository:
         transactions: List[Transaction] = []
         for _, transaction in self._transactions.items():
             if (
-                    transaction.get_from_address() == address
-                    or transaction.get_to_address() == address
+                transaction.get_from_address() == address
+                or transaction.get_to_address() == address
             ):
                 transactions.append(transaction)
 
