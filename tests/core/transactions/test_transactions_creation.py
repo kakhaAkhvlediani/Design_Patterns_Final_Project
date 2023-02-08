@@ -68,3 +68,44 @@ def test_transactions_equals_neg_fee(transaction: Transaction) -> None:
     assert not transaction == Transaction(
         from_address="1", to_address="2", amount=10.3, fee=7.2
     )
+
+
+def test_transaction_to_dict(transaction: Transaction) -> None:
+    assert transaction.to_dict() == {
+        "from_address": transaction.get_from_address(),
+        "to_address": transaction.get_to_address(),
+        "amount": transaction.get_amount(),
+        "fee": transaction.get_fee(),
+    }
+
+
+def test_transaction_to_dict_neg_no_fee(transaction: Transaction) -> None:
+    assert transaction.to_dict() != {
+        "from_address": transaction.get_from_address(),
+        "to_address": transaction.get_to_address(),
+        "amount": transaction.get_amount(),
+    }
+
+
+def test_transaction_to_dict_neg_no_amount(transaction: Transaction) -> None:
+    assert transaction.to_dict() != {
+        "from_address": transaction.get_from_address(),
+        "to_address": transaction.get_to_address(),
+        "fee": transaction.get_fee(),
+    }
+
+
+def test_transaction_to_dict_neg_no_to_address(transaction: Transaction) -> None:
+    assert transaction.to_dict() != {
+        "from_address": transaction.get_from_address(),
+        "amount": transaction.get_amount(),
+        "fee": transaction.get_fee(),
+    }
+
+
+def test_transaction_to_dict_neg_no_from_address(transaction: Transaction) -> None:
+    assert transaction.to_dict() != {
+        "to_address": transaction.get_to_address(),
+        "amount": transaction.get_amount(),
+        "fee": transaction.get_fee(),
+    }
