@@ -1,8 +1,5 @@
 from collections import defaultdict
-from typing import DefaultDict, Optional, List
-
-from app.core.transactions.interactor import Transaction
-from app.core.users.interactor import User
+from typing import DefaultDict
 
 
 class InMemoryAPIKeyRepository:
@@ -10,7 +7,6 @@ class InMemoryAPIKeyRepository:
 
     def __init__(self) -> None:
         self._api_keys_user_ids = defaultdict()
-
 
     # API_KEY
     def add_api_key_id_pair(self, api_key: str, user_id: int) -> None:

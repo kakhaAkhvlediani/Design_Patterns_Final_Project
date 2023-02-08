@@ -8,7 +8,7 @@ class APIKeyIDPair:
     api_key: str
 
 
-class IAPIKeyRepository(Protocol):
+class IAPIKeysRepository(Protocol):
     def add_api_key_id_pair(self, api_key: str, user_id: int) -> None:
         pass
 
@@ -18,7 +18,7 @@ class IAPIKeyRepository(Protocol):
 
 @dataclass
 class APIKeyInteractor:
-    _api_key_repository: IAPIKeyRepository
+    _api_key_repository: IAPIKeysRepository
 
     def add_api_key_id_pair(self, api_key: str, user_id: int) -> None:
         return self._api_key_repository.add_api_key_id_pair(

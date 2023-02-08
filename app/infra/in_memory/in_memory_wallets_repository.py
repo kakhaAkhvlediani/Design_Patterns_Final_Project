@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import DefaultDict, Optional, List
+from typing import DefaultDict, List, Optional
 
 from app.core.wallets.interactor import Wallet
 

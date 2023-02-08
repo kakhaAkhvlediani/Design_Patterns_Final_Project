@@ -5,9 +5,13 @@ import pytest
 from app.core.facade import BitcoinWalletCore, UserResponse
 from app.core.users.interactor import User
 from app.infra.in_memory.in_memory_api_key_repository import InMemoryAPIKeyRepository
+from app.infra.in_memory.in_memory_transactions_repository import (
+    InMemoryTransactionsRepository,
+)
+from app.infra.in_memory.in_memory_users_repository import InMemoryUsersRepository
 from app.infra.in_memory.in_memory_wallets_repository import InMemoryWalletsRepository
 from app.infra.utils.hasher import DefaultHashFunction
-from app.infra.in_memory.in_memory_users_repository import InMemoryUsersRepository
+from app.infra.utils.rate_provider import DefaultRateProvider
 
 
 @pytest.fixture
@@ -15,10 +19,16 @@ def core() -> BitcoinWalletCore:
     users_repository: InMemoryUsersRepository = InMemoryUsersRepository()
     wallets_repository: InMemoryWalletsRepository = InMemoryWalletsRepository()
     api_key_repository: InMemoryAPIKeyRepository = InMemoryAPIKeyRepository()
+    transactions_repository: InMemoryTransactionsRepository = (
+        InMemoryTransactionsRepository()
+    )
     return BitcoinWalletCore.create(
         users_repository=users_repository,
         wallets_repository=wallets_repository,
         api_key_repository=api_key_repository,
+        transactions_repository=transactions_repository,
+        hash_function=DefaultHashFunction(),
+        rate_provider=DefaultRateProvider(),
     )
 
 
@@ -49,9 +59,7 @@ def test_if_user_gets_saved_again(core: BitcoinWalletCore, user: User) -> None:
     )
     assert core.get_user_id_by_api_key(api_key=response.api_key) != -1
 
-    response: UserResponse = core.register_user(
-        user.get_username(), user.get_password()
-    )
+    response = core.register_user(user.get_username(), user.get_password())
     assert core.get_user_id_by_api_key(api_key=response.api_key) == -1
 
 
@@ -99,7 +107,7 @@ def test_password_gets_hashed(core: BitcoinWalletCore, user: User) -> None:
 
 
 def test_password_gets_hashed_correctly(
-        core: BitcoinWalletCore, user: User, hasher: DefaultHashFunction
+    core: BitcoinWalletCore, user: User, hasher: DefaultHashFunction
 ) -> None:
     core.register_user(user.get_username(), user.get_password())
     user_from_database: Optional[User] = core.get_user(user.get_username())
