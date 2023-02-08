@@ -10,6 +10,7 @@ from app.core.transactions.interactor import Transaction
 from app.core.users.interactor import UsersInteractor, IUserRepository, User
 from app.core.wallets.interactor import IWalletRepository, WalletsInteractor, Wallet
 from app.infra.utils.hasher import DefaultHashFunction
+from app.infra.utils.rate_provider import DefaultRateProvider
 
 MAX_NUM_OF_WALLET = 3  # todo add constants class
 
@@ -36,12 +37,18 @@ class IHasher(Protocol):
         return self.use_my_hash(args)
 
 
+class IRateProvider(Protocol):
+    def get_exchange_rate(self) -> float:
+        pass
+
+
 @dataclass
 class BitcoinWalletCore:
     _users_interactor: UsersInteractor
     _wallets_interactor: WalletsInteractor
     _api_key_interactor: APIKeyInteractor
     _hash: IHasher
+    _rate_provider: IRateProvider
 
     @classmethod
     def create(
@@ -50,12 +57,14 @@ class BitcoinWalletCore:
             wallets_repository: IWalletRepository,
             api_key_repository: IAPIKeyRepository,
             hash_function: IHasher = DefaultHashFunction(),
+            rate_provider: IRateProvider = DefaultRateProvider(),
     ) -> "BitcoinWalletCore":
         return cls(
             _users_interactor=UsersInteractor(_users_repository=users_repository),
             _wallets_interactor=WalletsInteractor(_wallets_repository=wallets_repository),
             _api_key_interactor=APIKeyInteractor(_api_key_repository=api_key_repository),
             _hash=hash_function,
+            _rate_provider=rate_provider,
         )
 
     # USER RESPONSE

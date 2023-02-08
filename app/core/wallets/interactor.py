@@ -2,11 +2,6 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Protocol
 
 
-class IRateProvider(Protocol):
-    def get_exchange_rate(self) -> float:
-        pass
-
-
 @dataclass
 class Wallet:
     _user_id: int
