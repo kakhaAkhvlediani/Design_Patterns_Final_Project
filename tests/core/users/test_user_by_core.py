@@ -4,10 +4,10 @@ import pytest
 
 from app.core.facade import BitcoinWalletCore, UserResponse
 from app.core.users.interactor import User
-from app.infra.in_memory.InMemoryAPIKeyRepository import InMemoryAPIKeyRepository
-from app.infra.in_memory.InMemoryWalletsRepository import InMemoryWalletsRepository
+from app.infra.in_memory.in_memory_api_key_repository import InMemoryAPIKeyRepository
+from app.infra.in_memory.in_memory_wallets_repository import InMemoryWalletsRepository
 from app.infra.utils.hasher import DefaultHashFunction
-from app.infra.in_memory.InMemoryUsersRepository import InMemoryUsersRepository
+from app.infra.in_memory.in_memory_users_repository import InMemoryUsersRepository
 
 
 @pytest.fixture
