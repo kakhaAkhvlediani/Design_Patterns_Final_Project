@@ -1,6 +1,6 @@
 import pytest
 
-from app.core.facade import BitcoinWalletCore, StatisticsResponse
+from app.core.facade import BitcoinWalletCore, StatisticsResponse, UserResponse, WalletResponse
 from app.core.users.interactor import User
 from app.infra.in_memory.in_memory_api_key_repository import InMemoryAPIKeyRepository
 from app.infra.in_memory.in_memory_transactions_repository import (
@@ -241,3 +241,63 @@ def test_deposit_and_transaction_to_different_wallet_of_same_user_neg_no_funds(
 
 def test_empty_get_statistics_with_wrong_api_key(core: BitcoinWalletCore) -> None:
     assert core.get_statistics("wrong_key").status == 403
+
+def test_get_transactions(
+        user1: User, user2: User, core: BitcoinWalletCore
+) -> None:
+    user_response1: UserResponse = core.register_user(
+        username=user1.get_username(), password=user1.get_password()
+    )
+    wallet_response1: WalletResponse = core.create_wallet(api_key=user_response1.api_key)
+
+    user_response2: UserResponse = core.register_user(
+        username=user2.get_username(), password=user2.get_password()
+    )
+    wallet_response2: WalletResponse = core.create_wallet(api_key=user_response2.api_key)
+
+    core.deposit(
+        api_key=user_response1.api_key,
+        address=wallet_response1.wallet_info["address"],
+        amount_in_usd=100,
+    )
+    core.withdraw(
+        api_key=user_response1.api_key,
+        address=wallet_response1.wallet_info["address"],
+        amount_in_usd=50,
+    )
+    core.make_transaction(
+        api_key=user_response1.api_key,
+        from_address=wallet_response1.wallet_info["address"],
+        to_address=wallet_response2.wallet_info["address"],
+        amount=1,
+    )
+
+    assert (
+            core.get_transactions_of_wallet(
+                api_key=user_response1.api_key + "wrong",
+                address=wallet_response1.wallet_info["address"],
+            ).status
+            == 403
+    )
+    assert (
+            core.get_transactions_of_wallet(
+                api_key=user_response1.api_key,
+                address=wallet_response1.wallet_info["address"] + "wrong",
+            ).status
+            == 404
+    )
+    assert (
+            core.get_transactions_of_wallet(
+                api_key=user_response2.api_key,
+                address=wallet_response1.wallet_info["address"],
+            ).status
+            == 403
+    )
+    # TODO test for correct transactions list
+    assert (
+            core.get_transactions_of_wallet(
+                api_key=user_response1.api_key,
+                address=wallet_response1.wallet_info["address"],
+            ).status
+            == 200
+    )
