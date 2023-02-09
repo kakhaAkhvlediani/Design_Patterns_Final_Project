@@ -1,4 +1,3 @@
-import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Protocol
 
@@ -79,8 +78,12 @@ class IFeeRateStrategy(Protocol):
         pass
 
 
-def _generate_wallet_address() -> str:  # TODO
-    return "wallet_" + str(uuid.uuid4())[0:12]
+class IUniqueValueGenerators(Protocol):
+    def generate_wallet_address(self) -> str:
+        pass
+
+    def generate_api_key(self) -> str:
+        pass
 
 
 @dataclass
@@ -93,6 +96,7 @@ class BitcoinWalletCore:
     _hash: IHasher
     _currency_converter: ICurrencyConverter
     _fee_strategy: IFeeRateStrategy
+    _unique_value_generator: IUniqueValueGenerators
 
     @classmethod
     def create(
@@ -104,6 +108,7 @@ class BitcoinWalletCore:
             hash_function: IHasher,
             currency_converter: ICurrencyConverter,
             fee_strategy: IFeeRateStrategy,
+            unique_value_generator: IUniqueValueGenerators,
     ) -> "BitcoinWalletCore":
         return cls(
             _users_interactor=UsersInteractor(_users_repository=users_repository),
@@ -119,11 +124,10 @@ class BitcoinWalletCore:
             _hash=hash_function,
             _currency_converter=currency_converter,
             _fee_strategy=fee_strategy,
+            _unique_value_generator=unique_value_generator,
         )
 
     # USER RESPONSE
-    def _generate_api_key(self, args: object) -> str:  # TODO
-        return "api_key_" + self._hash(args)
 
     def get_user_id_by_api_key(self, api_key: str) -> int:
         return self._api_key_interactor.get_user_id_by_api_key(api_key)
@@ -132,7 +136,7 @@ class BitcoinWalletCore:
         return self._users_interactor.get_user(username)
 
     def register_user(self, username: str, password: str) -> UserResponse:
-        api_key: str = self._generate_api_key((username, password))
+        api_key: str = self._unique_value_generator.generate_api_key()
         user: Optional[User] = self._users_interactor.register_user(
             username=username, password=self._hash(password)
         )
@@ -157,7 +161,7 @@ class BitcoinWalletCore:
 
     def create_wallet(self, api_key: str) -> WalletResponse:
         user_id: int = self.get_user_id_by_api_key(api_key)
-        address: str = _generate_wallet_address()
+        address: str = self._unique_value_generator.generate_wallet_address()
 
         if user_id == -1:
             return WalletResponse(
@@ -269,10 +273,10 @@ class BitcoinWalletCore:
 
         wallet: Optional[Wallet] = self._wallets_interactor.get_wallet(address=address)
         if wallet is None:
-            return WalletResponse(
+            return WalletResponse(  # TODO
                 status=status.HTTP_404_NOT_FOUND, msg="Wallet not found"
             )
-        elif wallet.get_owner_id() != user_id:
+        elif wallet.get_owner_id() != user_id:  # TODO
             return WalletResponse(status=status.HTTP_403_FORBIDDEN, msg="Wrong api_key")
 
         fee: float = self._get_fee(
@@ -333,7 +337,7 @@ class BitcoinWalletCore:
     ) -> TransactionResponse:
         user_id: int = self.get_user_id_by_api_key(api_key)
         if user_id == -1:
-            return TransactionResponse(
+            return TransactionResponse(  # TODO
                 status=status.HTTP_403_FORBIDDEN, msg="Invalid api_key"
             )
         sender: Optional[Wallet] = self._wallets_interactor.get_wallet(
@@ -343,11 +347,11 @@ class BitcoinWalletCore:
             address=to_address
         )
         if sender is None:
-            return TransactionResponse(
+            return TransactionResponse(  # TODO
                 status=status.HTTP_404_NOT_FOUND, msg="Wrong sender_address"
             )
         elif sender.get_owner_id() != user_id:
-            return TransactionResponse(
+            return TransactionResponse(  # TODO
                 status=status.HTTP_403_FORBIDDEN, msg="Wrong api_key"
             )
         elif sender.get_balance_in_btc() < amount:
@@ -355,7 +359,7 @@ class BitcoinWalletCore:
                 status=status.HTTP_400_BAD_REQUEST, msg="Insufficient funds"
             )
         elif receiver is None:
-            return TransactionResponse(
+            return TransactionResponse(  # TODO
                 status=status.HTTP_404_NOT_FOUND, msg="Wrong receiver_address"
             )
         elif sender.get_address() == receiver.get_address():

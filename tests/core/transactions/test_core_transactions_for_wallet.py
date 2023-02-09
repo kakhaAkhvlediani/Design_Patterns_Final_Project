@@ -11,6 +11,7 @@ from app.infra.in_memory.in_memory_users_repository import InMemoryUsersReposito
 from app.infra.in_memory.in_memory_wallets_repository import InMemoryWalletsRepository
 from app.infra.utils.currency_converter import DefaultCurrencyConverter
 from app.infra.utils.fee_strategy import FeeRateStrategy
+from app.infra.utils.generator import DefaultUniqueValueGenerators
 from app.infra.utils.hasher import DefaultHashFunction
 
 currency_converter: DefaultCurrencyConverter = DefaultCurrencyConverter()
@@ -32,6 +33,7 @@ def core() -> BitcoinWalletCore:
         hash_function=DefaultHashFunction(),
         currency_converter=DefaultCurrencyConverter(),
         fee_strategy=FeeRateStrategy(),
+        unique_value_generator=DefaultUniqueValueGenerators(),
     )
 
 

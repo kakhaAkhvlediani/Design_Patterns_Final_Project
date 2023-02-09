@@ -12,6 +12,7 @@ from app.infra.in_memory.in_memory_users_repository import InMemoryUsersReposito
 from app.infra.in_memory.in_memory_wallets_repository import InMemoryWalletsRepository
 from app.infra.utils.currency_converter import DefaultCurrencyConverter
 from app.infra.utils.fee_strategy import FeeRateStrategy
+from app.infra.utils.generator import DefaultUniqueValueGenerators
 from app.infra.utils.hasher import DefaultHashFunction
 
 
@@ -31,6 +32,7 @@ def core() -> BitcoinWalletCore:
         hash_function=DefaultHashFunction(),
         currency_converter=DefaultCurrencyConverter(),
         fee_strategy=FeeRateStrategy(),
+        unique_value_generator=DefaultUniqueValueGenerators(),
     )
 
 
@@ -93,12 +95,12 @@ def test_get_user_neg_wrong_username(core: BitcoinWalletCore, user: User) -> Non
     assert user_from_database is None
 
 
-def test_api_key_prefix(core: BitcoinWalletCore, user: User) -> None:
+def test_api_key(core: BitcoinWalletCore, user: User) -> None:
     response: UserResponse = core.register_user(
         user.get_username(), user.get_password()
     )
     api_key: str = response.api_key
-    assert api_key.startswith("api_key_")
+    assert api_key != ""
 
 
 def test_password_gets_hashed(core: BitcoinWalletCore, user: User) -> None:
@@ -109,7 +111,7 @@ def test_password_gets_hashed(core: BitcoinWalletCore, user: User) -> None:
 
 
 def test_password_gets_hashed_correctly(
-        core: BitcoinWalletCore, user: User, hasher: DefaultHashFunction
+    core: BitcoinWalletCore, user: User, hasher: DefaultHashFunction
 ) -> None:
     core.register_user(user.get_username(), user.get_password())
     user_from_database: Optional[User] = core.get_user(user.get_username())
