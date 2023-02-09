@@ -11,14 +11,10 @@ class DefaultCurrencyConverter:
     def _get_exchange_rate(self) -> float:
         return self._exchange_rate
 
-    def calculate_exchange_value_in_usd(
-            self, amount_in_btc: float
-    ) -> float:
+    def convert_to_usd(self, amount_in_btc: float) -> float:
         return amount_in_btc * self._get_exchange_rate()
 
-    def calculate_exchange_value_in_btc(
-            self, amount_in_usd: float
-    ) -> float:
+    def convert_to_btc(self, amount_in_usd: float) -> float:
         return amount_in_usd / self._get_exchange_rate()
 
 
@@ -33,12 +29,8 @@ class CoindeskCurrencyConverter:
         else:
             return 1
 
-    def calculate_exchange_value_in_usd(
-            self, amount_in_btc: float
-    ) -> float:
+    def convert_to_usd(self, amount_in_btc: float) -> float:
         return amount_in_btc * self._get_exchange_rate()
 
-    def calculate_exchange_value_in_btc(
-            self, amount_in_usd: float
-    ) -> float:
+    def convert_to_btc(self, amount_in_usd: float) -> float:
         return amount_in_usd / self._get_exchange_rate()

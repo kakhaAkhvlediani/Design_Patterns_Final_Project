@@ -10,9 +10,10 @@ from app.infra.in_memory.in_memory_transactions_repository import (
 )
 from app.infra.in_memory.in_memory_users_repository import InMemoryUsersRepository
 from app.infra.in_memory.in_memory_wallets_repository import InMemoryWalletsRepository
+from app.infra.utils.currency_converter import DefaultCurrencyConverter
 from app.infra.utils.fee_strategy import FeeRateStrategy
+from app.infra.utils.generator import DefaultUniqueValueGenerators
 from app.infra.utils.hasher import DefaultHashFunction
-from app.infra.utils.rate_provider import DefaultCurrencyConverter
 
 
 @pytest.fixture
@@ -31,6 +32,7 @@ def core() -> BitcoinWalletCore:
         hash_function=DefaultHashFunction(),
         currency_converter=DefaultCurrencyConverter(),
         fee_strategy=FeeRateStrategy(),
+        unique_value_generator=DefaultUniqueValueGenerators(),
     )
 
 
@@ -93,12 +95,12 @@ def test_get_user_neg_wrong_username(core: BitcoinWalletCore, user: User) -> Non
     assert user_from_database is None
 
 
-def test_api_key_prefix(core: BitcoinWalletCore, user: User) -> None:
+def test_api_key(core: BitcoinWalletCore, user: User) -> None:
     response: UserResponse = core.register_user(
         user.get_username(), user.get_password()
     )
     api_key: str = response.api_key
-    assert api_key.startswith("api_key_")
+    assert api_key != ""
 
 
 def test_password_gets_hashed(core: BitcoinWalletCore, user: User) -> None:
@@ -109,7 +111,7 @@ def test_password_gets_hashed(core: BitcoinWalletCore, user: User) -> None:
 
 
 def test_password_gets_hashed_correctly(
-        core: BitcoinWalletCore, user: User, hasher: DefaultHashFunction
+    core: BitcoinWalletCore, user: User, hasher: DefaultHashFunction
 ) -> None:
     core.register_user(user.get_username(), user.get_password())
     user_from_database: Optional[User] = core.get_user(user.get_username())
@@ -123,8 +125,8 @@ def test_password_gets_hashed_correctly(
 def test_register_user_changes(core: BitcoinWalletCore, user: User) -> None:
     core.register_user(username=user.get_username(), password=user.get_password())
 
-    get_user1: User = core.get_user(username=user.get_username())
-
+    get_user1: Optional[User] = core.get_user(username=user.get_username())
+    assert get_user1 is not None
     assert user != get_user1
     assert user.get_user_id() == get_user1.get_user_id()
     assert user.get_username() == get_user1.get_username()

@@ -1,6 +1,11 @@
 import pytest
 
-from app.core.facade import BitcoinWalletCore, StatisticsResponse
+from app.core.facade import (
+    BitcoinWalletCore,
+    StatisticsResponse,
+    UserResponse,
+    WalletResponse,
+)
 from app.core.users.interactor import User
 from app.infra.in_memory.in_memory_api_key_repository import InMemoryAPIKeyRepository
 from app.infra.in_memory.in_memory_transactions_repository import (
@@ -8,9 +13,10 @@ from app.infra.in_memory.in_memory_transactions_repository import (
 )
 from app.infra.in_memory.in_memory_users_repository import InMemoryUsersRepository
 from app.infra.in_memory.in_memory_wallets_repository import InMemoryWalletsRepository
+from app.infra.utils.currency_converter import DefaultCurrencyConverter
 from app.infra.utils.fee_strategy import FeeRateStrategy
+from app.infra.utils.generator import DefaultUniqueValueGenerators
 from app.infra.utils.hasher import DefaultHashFunction
-from app.infra.utils.rate_provider import DefaultCurrencyConverter
 
 hash_function: DefaultHashFunction = DefaultHashFunction()
 currency_converter: DefaultCurrencyConverter = DefaultCurrencyConverter()
@@ -33,6 +39,7 @@ def core() -> BitcoinWalletCore:
         hash_function=DefaultHashFunction(),
         currency_converter=DefaultCurrencyConverter(),
         fee_strategy=FeeRateStrategy(),
+        unique_value_generator=DefaultUniqueValueGenerators(),
     )
 
 
@@ -104,14 +111,15 @@ def test_deposit_withdraw_statistics(user1: User, core: BitcoinWalletCore) -> No
 
 
 def test_deposit_and_transaction_to_same_wallet_neg_user_has_two_wallets(
-        user1: User, core: BitcoinWalletCore
+    user1: User, core: BitcoinWalletCore
 ) -> None:
     api_key: str = core.register_user(
         username=user1.get_username(), password=user1.get_password()
     ).api_key
 
     address1: str = core.create_wallet(api_key=api_key).wallet_info["address"]
-    core.create_wallet(api_key=api_key).wallet_info["address"]
+    assert address1 != ""
+    address1 = core.create_wallet(api_key=api_key).wallet_info["address"]
 
     amount: float = 1
     core.make_transaction(
@@ -127,7 +135,7 @@ def test_deposit_and_transaction_to_same_wallet_neg_user_has_two_wallets(
 
 
 def test_deposit_and_transaction_to_same_wallet_neg_user_has_one_wallet(
-        user1: User, core: BitcoinWalletCore
+    user1: User, core: BitcoinWalletCore
 ) -> None:
     api_key: str = core.register_user(
         username=user1.get_username(), password=user1.get_password()
@@ -149,7 +157,7 @@ def test_deposit_and_transaction_to_same_wallet_neg_user_has_one_wallet(
 
 
 def test_deposit_and_transaction_to_different_wallet_of_same_user(
-        user1: User, core: BitcoinWalletCore
+    user1: User, core: BitcoinWalletCore
 ) -> None:
     api_key: str = core.register_user(
         username=user1.get_username(), password=user1.get_password()
@@ -167,28 +175,28 @@ def test_deposit_and_transaction_to_different_wallet_of_same_user(
         admin_api_key="admin_api_key"
     )
     assert (
-            statistics_response.platform_profit_in_usd
-            == currency_converter.calculate_exchange_value_in_usd(
-        amount_in_btc=amount * fee_strategy.get_fee_rate_for_same_owner()
-    )
+        statistics_response.platform_profit_in_usd
+        == currency_converter.convert_to_usd(
+            amount_in_btc=amount * fee_strategy.get_fee_rate_for_same_owner()
+        )
     )
     assert (
-            statistics_response.platform_profit_in_btc
-            == amount * fee_strategy.get_fee_rate_for_same_owner()
+        statistics_response.platform_profit_in_btc
+        == amount * fee_strategy.get_fee_rate_for_same_owner()
     )
     assert statistics_response.total_number_of_transactions == 1
 
 
 # TODO Add negative cases
 def test_transaction_to_other_user_wallet_neg_no_funds(
-        user1: User, core: BitcoinWalletCore
+    user1: User, user2: User, core: BitcoinWalletCore
 ) -> None:
     api_key1: str = core.register_user(
         username=user1.get_username(), password=user1.get_password()
     ).api_key
 
     api_key2: str = core.register_user(
-        username=user1.get_username() + "2", password=user1.get_password()
+        username=user2.get_username(), password=user2.get_password()
     ).api_key
 
     address1: str = core.create_wallet(api_key=api_key1).wallet_info["address"]
@@ -211,7 +219,7 @@ def test_transaction_to_other_user_wallet_neg_no_funds(
 
 
 def test_deposit_and_transaction_to_different_wallet_of_same_user_neg_no_funds(
-        user1: User, core: BitcoinWalletCore
+    user1: User, core: BitcoinWalletCore
 ) -> None:
     api_key: str = core.register_user(
         username=user1.get_username(), password=user1.get_password()
@@ -230,7 +238,74 @@ def test_deposit_and_transaction_to_different_wallet_of_same_user_neg_no_funds(
     )
     assert statistics_response.platform_profit_in_usd == 0
     assert (
-            statistics_response.platform_profit_in_btc
-            == amount * fee_strategy.get_fee_rate_for_same_owner()
+        statistics_response.platform_profit_in_btc
+        == amount * fee_strategy.get_fee_rate_for_same_owner()
     )
     assert statistics_response.total_number_of_transactions == 0
+
+
+def test_empty_get_statistics_with_wrong_api_key(core: BitcoinWalletCore) -> None:
+    assert core.get_statistics("wrong_key").status == 403
+
+
+def test_get_transactions(user1: User, user2: User, core: BitcoinWalletCore) -> None:
+    user_response1: UserResponse = core.register_user(
+        username=user1.get_username(), password=user1.get_password()
+    )
+    wallet_response1: WalletResponse = core.create_wallet(
+        api_key=user_response1.api_key
+    )
+
+    user_response2: UserResponse = core.register_user(
+        username=user2.get_username(), password=user2.get_password()
+    )
+    wallet_response2: WalletResponse = core.create_wallet(
+        api_key=user_response2.api_key
+    )
+
+    core.deposit(
+        api_key=user_response1.api_key,
+        address=wallet_response1.wallet_info["address"],
+        amount_in_usd=100,
+    )
+    core.withdraw(
+        api_key=user_response1.api_key,
+        address=wallet_response1.wallet_info["address"],
+        amount_in_usd=50,
+    )
+    core.make_transaction(
+        api_key=user_response1.api_key,
+        from_address=wallet_response1.wallet_info["address"],
+        to_address=wallet_response2.wallet_info["address"],
+        amount=1,
+    )
+
+    assert (
+        core.get_transactions_of_wallet(
+            api_key=user_response1.api_key + "wrong",
+            address=wallet_response1.wallet_info["address"],
+        ).status
+        == 403
+    )
+    assert (
+        core.get_transactions_of_wallet(
+            api_key=user_response1.api_key,
+            address=wallet_response1.wallet_info["address"] + "wrong",
+        ).status
+        == 404
+    )
+    assert (
+        core.get_transactions_of_wallet(
+            api_key=user_response2.api_key,
+            address=wallet_response1.wallet_info["address"],
+        ).status
+        == 403
+    )
+    # TODO test for correct transactions list
+    assert (
+        core.get_transactions_of_wallet(
+            api_key=user_response1.api_key,
+            address=wallet_response1.wallet_info["address"],
+        ).status
+        == 200
+    )
