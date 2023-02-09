@@ -28,14 +28,10 @@ class IHasher(Protocol):
 
 
 class ICurrencyConverter(Protocol):
-    def calculate_exchange_value_in_usd(
-            self, amount_in_btc: float
-    ) -> float:
+    def convert_to_usd(self, amount_in_btc: float) -> float:
         pass
 
-    def calculate_exchange_value_in_btc(
-            self, amount_in_usd: float
-    ) -> float:
+    def convert_to_btc(self, amount_in_usd: float) -> float:
         pass
 
 
@@ -83,7 +79,7 @@ class IFeeRateStrategy(Protocol):
         pass
 
 
-def _generate_wallet_address() -> str:
+def _generate_wallet_address() -> str:  # TODO
     return "wallet_" + str(uuid.uuid4())[0:12]
 
 
@@ -126,7 +122,7 @@ class BitcoinWalletCore:
         )
 
     # USER RESPONSE
-    def _generate_api_key(self, args: object) -> str:
+    def _generate_api_key(self, args: object) -> str:  # TODO
         return "api_key_" + self._hash(args)
 
     def get_user_id_by_api_key(self, api_key: str) -> int:
@@ -181,7 +177,7 @@ class BitcoinWalletCore:
         )
 
         to_dict: Dict[str, Any] = wallet.to_dict()
-        to_dict["balance_in_usd"] = self._currency_converter.calculate_exchange_value_in_usd(
+        to_dict["balance_in_usd"] = self._currency_converter.convert_to_usd(
             amount_in_btc=wallet.get_balance_in_btc()
         )
 
@@ -210,7 +206,7 @@ class BitcoinWalletCore:
             )
 
         to_dict: Dict[str, Any] = wallet.to_dict()
-        to_dict["balance_in_usd"] = self._currency_converter.calculate_exchange_value_in_usd(
+        to_dict["balance_in_usd"] = self._currency_converter.convert_to_usd(
             amount_in_btc=wallet.get_balance_in_btc()
         )
 
@@ -254,7 +250,9 @@ class BitcoinWalletCore:
             return amount * self._fee_strategy.get_fee_rate_for_deposit()
         elif receiver_id == EXTERNAL_TRANSACTION_ID:
             return amount * self._fee_strategy.get_fee_rate_for_withdraw()
-        return amount * self._fee_strategy.get_fee_rate_for_different_owners()
+        return (
+                amount * self._fee_strategy.get_fee_rate_for_different_owners()
+        )  # TODO transaction from one users wallet to another users wallet
 
     def deposit(
             self, api_key: str, address: str, amount_in_usd: float
@@ -265,7 +263,7 @@ class BitcoinWalletCore:
                 status=status.HTTP_403_FORBIDDEN, msg="Invalid api_key"
             )
 
-        amount_in_btc: float = self._currency_converter.calculate_exchange_value_in_btc(
+        amount_in_btc: float = self._currency_converter.convert_to_btc(
             amount_in_usd=amount_in_usd
         )
 
@@ -288,7 +286,8 @@ class BitcoinWalletCore:
 
         self._wallets_interactor.deposit(address, amount_in_btc - fee)
         return WalletResponse(
-            status=status.HTTP_201_CREATED, msg="Deposit was made",
+            status=status.HTTP_201_CREATED,
+            msg="Deposit was made",
         )
 
     def withdraw(
@@ -300,7 +299,7 @@ class BitcoinWalletCore:
                 status=status.HTTP_403_FORBIDDEN, msg="Invalid api_key"
             )
 
-        amount_in_btc: float = self._currency_converter.calculate_exchange_value_in_btc(
+        amount_in_btc: float = self._currency_converter.convert_to_btc(
             amount_in_usd=amount_in_usd
         )
         wallet: Optional[Wallet] = self._wallets_interactor.get_wallet(address=address)
@@ -402,7 +401,8 @@ class BitcoinWalletCore:
         return StatisticsResponse(
             status=status.HTTP_200_OK,
             platform_profit_in_btc=platform_profit,
-            platform_profit_in_usd=self._currency_converter.calculate_exchange_value_in_usd(
-                amount_in_btc=platform_profit),
+            platform_profit_in_usd=self._currency_converter.convert_to_usd(
+                amount_in_btc=platform_profit
+            ),
             total_number_of_transactions=total_number_of_transactions,
         )

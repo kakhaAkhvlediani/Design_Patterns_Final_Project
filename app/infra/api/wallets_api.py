@@ -24,8 +24,8 @@ wallets_api: APIRouter = APIRouter()
 
 @wallets_api.post("/wallets", status_code=status.HTTP_201_CREATED)
 def create_wallet(
-        api_key: str,
-        core: BitcoinWalletCore = Depends(get_core),
+    api_key: str,
+    core: BitcoinWalletCore = Depends(get_core),
 ) -> WalletResponse:
     response: WalletResponse = core.create_wallet(api_key=api_key)
     if response.status != status.HTTP_201_CREATED:
@@ -35,9 +35,9 @@ def create_wallet(
 
 @wallets_api.get("/wallets/{address}", status_code=status.HTTP_200_OK)
 def get_wallet(
-        address: str,
-        api_key: str,
-        core: BitcoinWalletCore = Depends(get_core),
+    address: str,
+    api_key: str,
+    core: BitcoinWalletCore = Depends(get_core),
 ) -> WalletResponse:
     response: WalletResponse = core.get_wallet(api_key=api_key, address=address)
     if response.status != status.HTTP_200_OK:
@@ -47,9 +47,9 @@ def get_wallet(
 
 @wallets_api.get("/wallets/{address}/transactions")
 def get_transactions_for_this_wallet(
-        address: str,
-        api_key: str,
-        core: BitcoinWalletCore = Depends(get_core),
+    address: str,
+    api_key: str,
+    core: BitcoinWalletCore = Depends(get_core),
 ) -> WalletResponse:
     response: WalletResponse = core.get_transactions_of_wallet(
         api_key=api_key, address=address
@@ -61,10 +61,10 @@ def get_transactions_for_this_wallet(
 
 @wallets_api.post("/wallets/{address}/deposit")
 def deposit(
-        api_key: str,
-        address: str,
-        amount: float,
-        core: BitcoinWalletCore = Depends(get_core),
+    api_key: str,
+    address: str,
+    amount: float,
+    core: BitcoinWalletCore = Depends(get_core),
 ) -> WalletResponse:
     response: WalletResponse = core.deposit(
         api_key=api_key,
@@ -78,10 +78,10 @@ def deposit(
 
 @wallets_api.post("/wallets/{address}/withdraw")
 def withdraw(
-        api_key: str,
-        address: str,
-        amount: float,
-        core: BitcoinWalletCore = Depends(get_core),
+    api_key: str,
+    address: str,
+    amount: float,
+    core: BitcoinWalletCore = Depends(get_core),
 ) -> WalletResponse:
     response: WalletResponse = core.withdraw(
         api_key=api_key,

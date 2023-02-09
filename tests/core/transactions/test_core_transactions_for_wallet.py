@@ -9,9 +9,9 @@ from app.infra.in_memory.in_memory_transactions_repository import (
 )
 from app.infra.in_memory.in_memory_users_repository import InMemoryUsersRepository
 from app.infra.in_memory.in_memory_wallets_repository import InMemoryWalletsRepository
+from app.infra.utils.currency_converter import DefaultCurrencyConverter
 from app.infra.utils.fee_strategy import FeeRateStrategy
 from app.infra.utils.hasher import DefaultHashFunction
-from app.infra.utils.rate_provider import DefaultCurrencyConverter
 
 currency_converter: DefaultCurrencyConverter = DefaultCurrencyConverter()
 
@@ -59,10 +59,9 @@ def test_deposit_balance(user: User, core: BitcoinWalletCore) -> None:
         user_response.api_key, wallet_response.wallet_info["address"]
     )
 
-    assert (
-            wallet_response.wallet_info["balance_in_btc"]
-            == 1 + currency_converter.calculate_exchange_value_in_btc(amount_in_usd=1000)
-    )
+    assert wallet_response.wallet_info[
+        "balance_in_btc"
+    ] == 1 + currency_converter.convert_to_btc(amount_in_usd=1000)
 
 
 def test_deposit_withdraw(user: User, core: BitcoinWalletCore) -> None:
@@ -81,7 +80,7 @@ def test_deposit_withdraw(user: User, core: BitcoinWalletCore) -> None:
         user_response.api_key, wallet_response.wallet_info["address"]
     )
 
-    expected: float = 1 + currency_converter.calculate_exchange_value_in_btc(amount_in_usd=1000)
+    expected: float = 1 + currency_converter.convert_to_btc(amount_in_usd=1000)
     assert wallet_response.wallet_info["balance_in_btc"] == expected
 
     core.withdraw(
@@ -93,7 +92,7 @@ def test_deposit_withdraw(user: User, core: BitcoinWalletCore) -> None:
     wallet_response = core.get_wallet(
         user_response.api_key, wallet_response.wallet_info["address"]
     )
-    expected = expected - currency_converter.calculate_exchange_value_in_btc(amount_in_usd=2500)
+    expected = expected - currency_converter.convert_to_btc(amount_in_usd=2500)
     assert wallet_response.wallet_info["balance_in_btc"] == expected
 
 
@@ -113,7 +112,7 @@ def test_withdraw_more_than_on_balance(user: User, core: BitcoinWalletCore) -> N
         user_response.api_key, wallet_response.wallet_info["address"]
     )
 
-    expected: float = 1 + currency_converter.calculate_exchange_value_in_btc(amount_in_usd=1000)
+    expected: float = 1 + currency_converter.convert_to_btc(amount_in_usd=1000)
     assert wallet_response.wallet_info["balance_in_btc"] == expected
 
     core.withdraw(
@@ -134,11 +133,14 @@ def test_deposit_neg_wrong_api_key_deposit(user: User, core: BitcoinWalletCore) 
     )
     wallet_response: WalletResponse = core.create_wallet(api_key=user_response.api_key)
 
-    assert core.deposit(
-        api_key=user_response.api_key + "2",
-        address=wallet_response.wallet_info["address"],
-        amount_in_usd=1000,
-    ).status == status.HTTP_403_FORBIDDEN
+    assert (
+        core.deposit(
+            api_key=user_response.api_key + "2",
+            address=wallet_response.wallet_info["address"],
+            amount_in_usd=1000,
+        ).status
+        == status.HTTP_403_FORBIDDEN
+    )
 
     wallet_response = core.get_wallet(
         user_response.api_key, wallet_response.wallet_info["address"]
@@ -148,17 +150,22 @@ def test_deposit_neg_wrong_api_key_deposit(user: User, core: BitcoinWalletCore) 
     assert wallet_response.wallet_info["balance_in_btc"] == expected
 
 
-def test_deposit_neg_wrong_api_key_withdraw(user: User, core: BitcoinWalletCore) -> None:
+def test_deposit_neg_wrong_api_key_withdraw(
+    user: User, core: BitcoinWalletCore
+) -> None:
     user_response: UserResponse = core.register_user(
         username=user.get_username(), password=user.get_password()
     )
     wallet_response: WalletResponse = core.create_wallet(api_key=user_response.api_key)
 
-    assert core.withdraw(
-        api_key=user_response.api_key + "2",
-        address=wallet_response.wallet_info["address"],
-        amount_in_usd=25,
-    ).status == status.HTTP_403_FORBIDDEN
+    assert (
+        core.withdraw(
+            api_key=user_response.api_key + "2",
+            address=wallet_response.wallet_info["address"],
+            amount_in_usd=25,
+        ).status
+        == status.HTTP_403_FORBIDDEN
+    )
 
     wallet_response = core.get_wallet(
         user_response.api_key, wallet_response.wallet_info["address"]
@@ -167,17 +174,22 @@ def test_deposit_neg_wrong_api_key_withdraw(user: User, core: BitcoinWalletCore)
     assert wallet_response.wallet_info["balance_in_btc"] == 1
 
 
-def test_deposit_neg_wrong_wallet_address_withdraw(user: User, core: BitcoinWalletCore) -> None:
+def test_deposit_neg_wrong_wallet_address_withdraw(
+    user: User, core: BitcoinWalletCore
+) -> None:
     user_response: UserResponse = core.register_user(
         username=user.get_username() + "a", password=user.get_password()
     )
     wallet_response: WalletResponse = core.create_wallet(api_key=user_response.api_key)
 
-    assert core.withdraw(
-        api_key=user_response.api_key,
-        address=wallet_response.wallet_info["address"] + "2",
-        amount_in_usd=25,
-    ).status == status.HTTP_404_NOT_FOUND
+    assert (
+        core.withdraw(
+            api_key=user_response.api_key,
+            address=wallet_response.wallet_info["address"] + "2",
+            amount_in_usd=25,
+        ).status
+        == status.HTTP_404_NOT_FOUND
+    )
 
     wallet_response = core.get_wallet(
         user_response.api_key, wallet_response.wallet_info["address"]
@@ -186,7 +198,9 @@ def test_deposit_neg_wrong_wallet_address_withdraw(user: User, core: BitcoinWall
     assert wallet_response.wallet_info["balance_in_btc"] == 1
 
 
-def test_deposit_neg_wrong_owner_key_withdraw(user: User, core: BitcoinWalletCore) -> None:
+def test_deposit_neg_wrong_owner_key_withdraw(
+    user: User, core: BitcoinWalletCore
+) -> None:
     api_key: str = core.register_user(
         username=user.get_username() + "a", password=user.get_password()
     ).api_key
@@ -195,11 +209,14 @@ def test_deposit_neg_wrong_owner_key_withdraw(user: User, core: BitcoinWalletCor
     )
     wallet_response: WalletResponse = core.create_wallet(api_key=user_response.api_key)
 
-    assert core.withdraw(
-        api_key=api_key,
-        address=wallet_response.wallet_info["address"],
-        amount_in_usd=25,
-    ).status == status.HTTP_403_FORBIDDEN
+    assert (
+        core.withdraw(
+            api_key=api_key,
+            address=wallet_response.wallet_info["address"],
+            amount_in_usd=25,
+        ).status
+        == status.HTTP_403_FORBIDDEN
+    )
 
     wallet_response = core.get_wallet(
         user_response.api_key, wallet_response.wallet_info["address"]
