@@ -13,7 +13,10 @@ from app.core.transactions.interactor import (
 from app.core.users.interactor import IUsersRepository, User, UsersInteractor
 from app.core.wallets.interactor import IWalletsRepository, Wallet, WalletsInteractor
 
-MAX_NUM_OF_WALLET = 3  # todo add constants class
+MAX_NUM_OF_WALLET: int = 3
+ADMIN_API_KEY: str = "admin_api_key"
+WALLET_STARTING_BALANCE: float = 1
+EXTERNAL_TRANSACTION_ID: int = -10
 
 
 class IHasher(Protocol):
@@ -24,8 +27,15 @@ class IHasher(Protocol):
         return self.use_my_hash(args)
 
 
-class IRateProvider(Protocol):
-    def get_exchange_rate(self) -> float:
+class ICurrencyConverter(Protocol):
+    def calculate_exchange_value_in_usd(
+            self, amount_in_btc: float
+    ) -> float:
+        pass
+
+    def calculate_exchange_value_in_btc(
+            self, amount_in_usd: float
+    ) -> float:
         pass
 
 
@@ -73,6 +83,10 @@ class IFeeRateStrategy(Protocol):
         pass
 
 
+def _generate_wallet_address() -> str:
+    return "wallet_" + str(uuid.uuid4())[0:12]
+
+
 @dataclass
 class BitcoinWalletCore:
     _users_interactor: UsersInteractor
@@ -81,29 +95,19 @@ class BitcoinWalletCore:
     _api_key_interactor: APIKeyInteractor
 
     _hash: IHasher
-    _rate_provider: IRateProvider
+    _currency_converter: ICurrencyConverter
     _fee_strategy: IFeeRateStrategy
-
-    _admin_api_key: str
-    _wallet_starting_balance: float
-    _external_transaction_id: int
-
-    def _get_admin_api_key(self) -> str:
-        return self._admin_api_key
 
     @classmethod
     def create(
-        cls,
-        users_repository: IUsersRepository,
-        wallets_repository: IWalletsRepository,
-        transactions_repository: ITransactionsRepository,
-        api_key_repository: IAPIKeysRepository,
-        hash_function: IHasher,
-        rate_provider: IRateProvider,
-        fee_strategy: IFeeRateStrategy,
-        admin_api_key: str = "admin_api_key",
-        wallet_starting_balance: float = 1,
-        external_transaction_id: int = -10,
+            cls,
+            users_repository: IUsersRepository,
+            wallets_repository: IWalletsRepository,
+            transactions_repository: ITransactionsRepository,
+            api_key_repository: IAPIKeysRepository,
+            hash_function: IHasher,
+            currency_converter: ICurrencyConverter,
+            fee_strategy: IFeeRateStrategy,
     ) -> "BitcoinWalletCore":
         return cls(
             _users_interactor=UsersInteractor(_users_repository=users_repository),
@@ -117,28 +121,19 @@ class BitcoinWalletCore:
                 _api_key_repository=api_key_repository
             ),
             _hash=hash_function,
-            _rate_provider=rate_provider,
+            _currency_converter=currency_converter,
             _fee_strategy=fee_strategy,
-            _admin_api_key=admin_api_key,
-            _wallet_starting_balance=wallet_starting_balance,
-            _external_transaction_id=external_transaction_id,
         )
 
     # USER RESPONSE
     def _generate_api_key(self, args: object) -> str:
         return "api_key_" + self._hash(args)
 
-    def _generate_wallet_address(self) -> str:
-        return "wallet_" + str(uuid.uuid4())[0:12]
-
     def get_user_id_by_api_key(self, api_key: str) -> int:
         return self._api_key_interactor.get_user_id_by_api_key(api_key)
 
     def get_user(self, username: str) -> Optional[User]:
         return self._users_interactor.get_user(username)
-
-    def is_correct_api_key(self, api_key: str) -> bool:
-        return self.get_user_id_by_api_key(api_key=api_key) != -1
 
     def register_user(self, username: str, password: str) -> UserResponse:
         api_key: str = self._generate_api_key((username, password))
@@ -160,19 +155,13 @@ class BitcoinWalletCore:
 
     def _check_if_user_has_max_num_of_wallets(self, user_id: int) -> bool:
         return (
-            self._wallets_interactor.get_number_of_wallets_of_user(user_id)
-            == MAX_NUM_OF_WALLET
+                self._wallets_interactor.get_number_of_wallets_of_user(user_id)
+                == MAX_NUM_OF_WALLET
         )
-
-    def _calculate_exchange_value_in_usd(self, amount_in_btc: float) -> float:
-        return amount_in_btc * self._rate_provider.get_exchange_rate()
-
-    def _calculate_exchange_value_in_btc(self, amount_in_usd: float) -> float:
-        return amount_in_usd / self._rate_provider.get_exchange_rate()
 
     def create_wallet(self, api_key: str) -> WalletResponse:
         user_id: int = self.get_user_id_by_api_key(api_key)
-        address: str = self._generate_wallet_address()
+        address: str = _generate_wallet_address()
 
         if user_id == -1:
             return WalletResponse(
@@ -188,11 +177,11 @@ class BitcoinWalletCore:
         wallet: Wallet = self._wallets_interactor.create_wallet(
             user_id=user_id,
             address=address,
-            balance_in_btc=self._wallet_starting_balance,
+            balance_in_btc=WALLET_STARTING_BALANCE,
         )
 
         to_dict: Dict[str, Any] = wallet.to_dict()
-        to_dict["balance_in_usd"] = self._calculate_exchange_value_in_usd(
+        to_dict["balance_in_usd"] = self._currency_converter.calculate_exchange_value_in_usd(
             amount_in_btc=wallet.get_balance_in_btc()
         )
 
@@ -221,7 +210,7 @@ class BitcoinWalletCore:
             )
 
         to_dict: Dict[str, Any] = wallet.to_dict()
-        to_dict["balance_in_usd"] = self._calculate_exchange_value_in_usd(
+        to_dict["balance_in_usd"] = self._currency_converter.calculate_exchange_value_in_usd(
             amount_in_btc=wallet.get_balance_in_btc()
         )
 
@@ -261,14 +250,14 @@ class BitcoinWalletCore:
     def _get_fee(self, sender_id: int, receiver_id: int, amount: float) -> float:
         if sender_id == receiver_id:
             return amount * self._fee_strategy.get_fee_rate_for_same_owner()
-        elif sender_id == self._external_transaction_id:
+        elif sender_id == EXTERNAL_TRANSACTION_ID:
             return amount * self._fee_strategy.get_fee_rate_for_deposit()
-        elif receiver_id == self._external_transaction_id:
+        elif receiver_id == EXTERNAL_TRANSACTION_ID:
             return amount * self._fee_strategy.get_fee_rate_for_withdraw()
         return amount * self._fee_strategy.get_fee_rate_for_different_owners()
 
     def deposit(
-        self, api_key: str, address: str, amount_in_usd: float
+            self, api_key: str, address: str, amount_in_usd: float
     ) -> WalletResponse:
         user_id: int = self.get_user_id_by_api_key(api_key)
         if user_id == -1:
@@ -276,7 +265,7 @@ class BitcoinWalletCore:
                 status=status.HTTP_403_FORBIDDEN, msg="Invalid api_key"
             )
 
-        amount_in_btc: float = self._calculate_exchange_value_in_btc(
+        amount_in_btc: float = self._currency_converter.calculate_exchange_value_in_btc(
             amount_in_usd=amount_in_usd
         )
 
@@ -289,7 +278,7 @@ class BitcoinWalletCore:
             return WalletResponse(status=status.HTTP_403_FORBIDDEN, msg="Wrong api_key")
 
         fee: float = self._get_fee(
-            sender_id=self._external_transaction_id,
+            sender_id=EXTERNAL_TRANSACTION_ID,
             receiver_id=wallet.get_owner_id(),
             amount=amount_in_btc,
         )
@@ -298,22 +287,12 @@ class BitcoinWalletCore:
         )
 
         self._wallets_interactor.deposit(address, amount_in_btc - fee)
-
-        wallet = self._wallets_interactor.get_wallet(address=address)
-        if wallet is None:
-            return WalletResponse(
-                status=status.HTTP_404_NOT_FOUND, msg="Wallet not found"
-            )
-        to_dict: Dict[str, Any] = wallet.to_dict()
-        to_dict["balance_in_usd"] = (
-            wallet.get_balance_in_btc() * self._rate_provider.get_exchange_rate()
-        )
         return WalletResponse(
-            status=status.HTTP_201_CREATED, msg="Deposit was made", wallet_info=to_dict
+            status=status.HTTP_201_CREATED, msg="Deposit was made",
         )
 
     def withdraw(
-        self, api_key: str, address: str, amount_in_usd: float
+            self, api_key: str, address: str, amount_in_usd: float
     ) -> WalletResponse:
         user_id: int = self.get_user_id_by_api_key(api_key)
         if user_id == -1:
@@ -321,7 +300,7 @@ class BitcoinWalletCore:
                 status=status.HTTP_403_FORBIDDEN, msg="Invalid api_key"
             )
 
-        amount_in_btc: float = self._calculate_exchange_value_in_btc(
+        amount_in_btc: float = self._currency_converter.calculate_exchange_value_in_btc(
             amount_in_usd=amount_in_usd
         )
         wallet: Optional[Wallet] = self._wallets_interactor.get_wallet(address=address)
@@ -338,35 +317,20 @@ class BitcoinWalletCore:
 
         fee: float = self._get_fee(
             sender_id=wallet.get_owner_id(),
-            receiver_id=self._external_transaction_id,
+            receiver_id=EXTERNAL_TRANSACTION_ID,
             amount=amount_in_btc,
         )
         self._transactions_interactor.make_transaction(
             from_address=address, to_address="WITHDRAW", amount=amount_in_btc, fee=fee
         )
         self._wallets_interactor.withdraw(address, amount_in_btc - fee)
-
-        wallet = self._wallets_interactor.get_wallet(address=address)
-        if wallet is None:
-            return WalletResponse(
-                status=status.HTTP_404_NOT_FOUND, msg="Wallet not found"
-            )
-        if wallet is None:
-            return WalletResponse(
-                status=status.HTTP_404_NOT_FOUND, msg="Wallet not found"
-            )
-        to_dict: Dict[str, Any] = wallet.to_dict()
-        to_dict["balance_in_usd"] = (
-            wallet.get_balance_in_btc() * self._rate_provider.get_exchange_rate()
-        )
         return WalletResponse(
             status=status.HTTP_201_CREATED,
             msg="Withdrawal was made",
-            wallet_info=to_dict,
         )
 
     def make_transaction(
-        self, api_key: str, from_address: str, to_address: str, amount: float
+            self, api_key: str, from_address: str, to_address: str, amount: float
     ) -> TransactionResponse:
         user_id: int = self.get_user_id_by_api_key(api_key)
         if user_id == -1:
@@ -421,7 +385,7 @@ class BitcoinWalletCore:
 
     # STATISTICS RESPONSE
     def get_statistics(self, admin_api_key: str) -> StatisticsResponse:
-        if admin_api_key != self._get_admin_api_key():
+        if admin_api_key != ADMIN_API_KEY:
             return StatisticsResponse(
                 status=status.HTTP_403_FORBIDDEN, msg="Wrong admin_api_key"
             )
@@ -438,7 +402,7 @@ class BitcoinWalletCore:
         return StatisticsResponse(
             status=status.HTTP_200_OK,
             platform_profit_in_btc=platform_profit,
-            platform_profit_in_usd=platform_profit
-            * self._rate_provider.get_exchange_rate(),
+            platform_profit_in_usd=self._currency_converter.calculate_exchange_value_in_usd(
+                amount_in_btc=platform_profit),
             total_number_of_transactions=total_number_of_transactions,
         )
