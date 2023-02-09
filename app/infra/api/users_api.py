@@ -10,10 +10,12 @@ from app.infra.api.dependables import get_core
 
 users_api: APIRouter = APIRouter()
 
+status_translator: Dict
+
 
 @users_api.post("/users", status_code=status.HTTP_201_CREATED)
 def register_user(
-    username: str, password: str, core: BitcoinWalletCore = Depends(get_core)
+        username: str, password: str, core: BitcoinWalletCore = Depends(get_core)
 ) -> UserResponse:
     response: UserResponse = core.register_user(username=username, password=password)
     if response.status != status.HTTP_201_CREATED:
