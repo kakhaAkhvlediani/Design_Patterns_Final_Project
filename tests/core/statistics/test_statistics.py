@@ -10,10 +10,10 @@ from app.infra.in_memory.in_memory_users_repository import InMemoryUsersReposito
 from app.infra.in_memory.in_memory_wallets_repository import InMemoryWalletsRepository
 from app.infra.utils.fee_strategy import FeeRateStrategy
 from app.infra.utils.hasher import DefaultHashFunction
-from app.infra.utils.rate_provider import DefaultRateProvider
+from app.infra.utils.rate_provider import DefaultCurrencyConverter
 
 hash_function: DefaultHashFunction = DefaultHashFunction()
-rate_provider: DefaultRateProvider = DefaultRateProvider()
+currency_converter: DefaultCurrencyConverter = DefaultCurrencyConverter()
 fee_strategy: FeeRateStrategy = FeeRateStrategy()
 
 
@@ -31,7 +31,7 @@ def core() -> BitcoinWalletCore:
         api_key_repository=api_key_repository,
         transactions_repository=transactions_repository,
         hash_function=DefaultHashFunction(),
-        rate_provider=DefaultRateProvider(),
+        currency_converter=DefaultCurrencyConverter(),
         fee_strategy=FeeRateStrategy(),
     )
 
@@ -121,14 +121,8 @@ def test_deposit_and_transaction_to_same_wallet_neg_user_has_two_wallets(
     statistics_response: StatisticsResponse = core.get_statistics(
         admin_api_key="admin_api_key"
     )
-    assert (
-            statistics_response.platform_profit_in_usd
-            == 0
-    )
-    assert (
-            statistics_response.platform_profit_in_btc
-            == 0
-    )
+    assert statistics_response.platform_profit_in_usd == 0
+    assert statistics_response.platform_profit_in_btc == 0
     assert statistics_response.total_number_of_transactions == 0
 
 
@@ -149,14 +143,8 @@ def test_deposit_and_transaction_to_same_wallet_neg_user_has_one_wallet(
     statistics_response: StatisticsResponse = core.get_statistics(
         admin_api_key="admin_api_key"
     )
-    assert (
-            statistics_response.platform_profit_in_usd
-            == 0
-    )
-    assert (
-            statistics_response.platform_profit_in_btc
-            == 0
-    )
+    assert statistics_response.platform_profit_in_usd == 0
+    assert statistics_response.platform_profit_in_btc == 0
     assert statistics_response.total_number_of_transactions == 0
 
 
@@ -180,9 +168,9 @@ def test_deposit_and_transaction_to_different_wallet_of_same_user(
     )
     assert (
             statistics_response.platform_profit_in_usd
-            == amount
-            * fee_strategy.get_fee_rate_for_same_owner()
-            * rate_provider.get_exchange_rate()
+            == currency_converter.calculate_exchange_value_in_usd(
+        amount_in_btc=amount * fee_strategy.get_fee_rate_for_same_owner()
+    )
     )
     assert (
             statistics_response.platform_profit_in_btc
@@ -191,7 +179,8 @@ def test_deposit_and_transaction_to_different_wallet_of_same_user(
     assert statistics_response.total_number_of_transactions == 1
 
 
-def test_deposit_and_transaction_to_different_wallet_of_same_user_neg_no_funds(  # TODO Add negative cases
+# TODO Add negative cases
+def test_transaction_to_other_user_wallet_neg_no_funds(
         user1: User, core: BitcoinWalletCore
 ) -> None:
     api_key1: str = core.register_user(
@@ -213,14 +202,8 @@ def test_deposit_and_transaction_to_different_wallet_of_same_user_neg_no_funds( 
     statistics_response: StatisticsResponse = core.get_statistics(
         admin_api_key="admin_api_key"
     )
-    assert (
-            statistics_response.platform_profit_in_usd
-            == 0
-    )
-    assert (
-            statistics_response.platform_profit_in_btc
-            == 0
-    )
+    assert statistics_response.platform_profit_in_usd == 0
+    assert statistics_response.platform_profit_in_btc == 0
     assert statistics_response.total_number_of_transactions == 0
 
 
@@ -245,45 +228,9 @@ def test_deposit_and_transaction_to_different_wallet_of_same_user_neg_no_funds(
     statistics_response: StatisticsResponse = core.get_statistics(
         admin_api_key="admin_api_key"
     )
-    assert (
-            statistics_response.platform_profit_in_usd
-            == 0
-    )
+    assert statistics_response.platform_profit_in_usd == 0
     assert (
             statistics_response.platform_profit_in_btc
             == amount * fee_strategy.get_fee_rate_for_same_owner()
-    )
-    assert statistics_response.total_number_of_transactions == 0
-
-
-def test_deposit_and_transaction_to_different_wallet_of_same_user_neg_no_funds(  # TODO Add negative cases
-        user1: User, core: BitcoinWalletCore
-) -> None:
-    api_key1: str = core.register_user(
-        username=user1.get_username(), password=user1.get_password()
-    ).api_key
-
-    api_key2: str = core.register_user(
-        username=user1.get_username() + "2", password=user1.get_password()
-    ).api_key
-
-    address1: str = core.create_wallet(api_key=api_key1).wallet_info["address"]
-    address2: str = core.create_wallet(api_key=api_key2).wallet_info["address"]
-
-    amount: float = 10
-    core.make_transaction(
-        api_key=api_key1, from_address=address1, to_address=address2, amount=amount
-    )
-
-    statistics_response: StatisticsResponse = core.get_statistics(
-        admin_api_key="admin_api_key"
-    )
-    assert (
-            statistics_response.platform_profit_in_usd
-            == 0
-    )
-    assert (
-            statistics_response.platform_profit_in_btc
-            == 0
     )
     assert statistics_response.total_number_of_transactions == 0

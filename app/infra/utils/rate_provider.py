@@ -5,20 +5,40 @@ import requests
 
 
 @dataclass
-class DefaultRateProvider:
+class DefaultCurrencyConverter:
     _exchange_rate: float = 20000.11
 
-    def get_exchange_rate(self) -> float:
+    def _get_exchange_rate(self) -> float:
         return self._exchange_rate
+
+    def calculate_exchange_value_in_usd(
+            self, amount_in_btc: float
+    ) -> float:
+        return amount_in_btc * self._get_exchange_rate()
+
+    def calculate_exchange_value_in_btc(
+            self, amount_in_usd: float
+    ) -> float:
+        return amount_in_usd / self._get_exchange_rate()
 
 
 @dataclass
-class ExchangeRateProvider:
+class CoindeskCurrencyConverter:
     source: str = "https://api.coindesk.com/v1/bpi/currentprice/USD.json"
 
-    def get_exchange_rate(self) -> float:
+    def _get_exchange_rate(self) -> float:
         result: Any = requests.get(self.source).json()["bpi"]["USD"]["rate_float"]
         if isinstance(result, float):
             return result
         else:
             return 1
+
+    def calculate_exchange_value_in_usd(
+            self, amount_in_btc: float
+    ) -> float:
+        return amount_in_btc * self._get_exchange_rate()
+
+    def calculate_exchange_value_in_btc(
+            self, amount_in_usd: float
+    ) -> float:
+        return amount_in_usd / self._get_exchange_rate()

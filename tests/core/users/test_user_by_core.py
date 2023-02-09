@@ -12,7 +12,7 @@ from app.infra.in_memory.in_memory_users_repository import InMemoryUsersReposito
 from app.infra.in_memory.in_memory_wallets_repository import InMemoryWalletsRepository
 from app.infra.utils.fee_strategy import FeeRateStrategy
 from app.infra.utils.hasher import DefaultHashFunction
-from app.infra.utils.rate_provider import DefaultRateProvider
+from app.infra.utils.rate_provider import DefaultCurrencyConverter
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def core() -> BitcoinWalletCore:
         api_key_repository=api_key_repository,
         transactions_repository=transactions_repository,
         hash_function=DefaultHashFunction(),
-        rate_provider=DefaultRateProvider(),
+        currency_converter=DefaultCurrencyConverter(),
         fee_strategy=FeeRateStrategy(),
     )
 
@@ -109,7 +109,7 @@ def test_password_gets_hashed(core: BitcoinWalletCore, user: User) -> None:
 
 
 def test_password_gets_hashed_correctly(
-    core: BitcoinWalletCore, user: User, hasher: DefaultHashFunction
+        core: BitcoinWalletCore, user: User, hasher: DefaultHashFunction
 ) -> None:
     core.register_user(user.get_username(), user.get_password())
     user_from_database: Optional[User] = core.get_user(user.get_username())
