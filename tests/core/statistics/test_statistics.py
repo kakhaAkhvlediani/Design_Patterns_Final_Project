@@ -106,7 +106,7 @@ def test_deposit_withdraw_statistics(user1: User, core: BitcoinWalletCore) -> No
 
 
 def test_deposit_and_transaction_to_same_wallet_neg_user_has_two_wallets(
-        user1: User, core: BitcoinWalletCore
+    user1: User, core: BitcoinWalletCore
 ) -> None:
     api_key: str = core.register_user(
         username=user1.get_username(), password=user1.get_password()
@@ -130,7 +130,7 @@ def test_deposit_and_transaction_to_same_wallet_neg_user_has_two_wallets(
 
 
 def test_deposit_and_transaction_to_same_wallet_neg_user_has_one_wallet(
-        user1: User, core: BitcoinWalletCore
+    user1: User, core: BitcoinWalletCore
 ) -> None:
     api_key: str = core.register_user(
         username=user1.get_username(), password=user1.get_password()
@@ -152,7 +152,7 @@ def test_deposit_and_transaction_to_same_wallet_neg_user_has_one_wallet(
 
 
 def test_deposit_and_transaction_to_different_wallet_of_same_user(
-        user1: User, core: BitcoinWalletCore
+    user1: User, core: BitcoinWalletCore
 ) -> None:
     api_key: str = core.register_user(
         username=user1.get_username(), password=user1.get_password()
@@ -170,21 +170,21 @@ def test_deposit_and_transaction_to_different_wallet_of_same_user(
         admin_api_key="admin_api_key"
     )
     assert (
-            statistics_response.platform_profit_in_usd
-            == currency_converter.convert_to_usd(
-        amount_in_btc=amount * fee_strategy.get_fee_rate_for_same_owner()
-    )
+        statistics_response.platform_profit_in_usd
+        == currency_converter.convert_to_usd(
+            amount_in_btc=amount * fee_strategy.get_fee_rate_for_same_owner()
+        )
     )
     assert (
-            statistics_response.platform_profit_in_btc
-            == amount * fee_strategy.get_fee_rate_for_same_owner()
+        statistics_response.platform_profit_in_btc
+        == amount * fee_strategy.get_fee_rate_for_same_owner()
     )
     assert statistics_response.total_number_of_transactions == 1
 
 
 # TODO Add negative cases
 def test_transaction_to_other_user_wallet_neg_no_funds(
-        user1: User, user2: User, core: BitcoinWalletCore
+    user1: User, user2: User, core: BitcoinWalletCore
 ) -> None:
     api_key1: str = core.register_user(
         username=user1.get_username(), password=user1.get_password()
@@ -214,7 +214,7 @@ def test_transaction_to_other_user_wallet_neg_no_funds(
 
 
 def test_deposit_and_transaction_to_different_wallet_of_same_user_neg_no_funds(
-        user1: User, core: BitcoinWalletCore
+    user1: User, core: BitcoinWalletCore
 ) -> None:
     api_key: str = core.register_user(
         username=user1.get_username(), password=user1.get_password()
@@ -233,8 +233,8 @@ def test_deposit_and_transaction_to_different_wallet_of_same_user_neg_no_funds(
     )
     assert statistics_response.platform_profit_in_usd == 0
     assert (
-            statistics_response.platform_profit_in_btc
-            == amount * fee_strategy.get_fee_rate_for_same_owner()
+        statistics_response.platform_profit_in_btc
+        == amount * fee_strategy.get_fee_rate_for_same_owner()
     )
     assert statistics_response.total_number_of_transactions == 0
 

@@ -67,27 +67,21 @@ def test_get_wallet_with_wrong_api_key(user: User, core: BitcoinWalletCore) -> N
         username=user.get_username(), password=user.get_password()
     ).api_key
     address: str = core.create_wallet(api_key=api_key).wallet_info["address"]
-    assert (
-            core.get_wallet(api_key=api_key + "1", address=address).status
-            == 403
-    )
+    assert core.get_wallet(api_key=api_key + "1", address=address).status == 403
 
 
 def test_get_wallet_with_wrong_wallet_address(
-        user: User, core: BitcoinWalletCore
+    user: User, core: BitcoinWalletCore
 ) -> None:
     api_key: str = core.register_user(
         username=user.get_username(), password=user.get_password()
     ).api_key
     address: str = core.create_wallet(api_key=api_key).wallet_info["address"]
-    assert (
-            core.get_wallet(api_key=api_key, address=address + "w").status
-            == 404
-    )
+    assert core.get_wallet(api_key=api_key, address=address + "w").status == 404
 
 
 def test_get_wallet_with_api_key_of_other_user(
-        user: User, core: BitcoinWalletCore
+    user: User, core: BitcoinWalletCore
 ) -> None:
     api_key: str = core.register_user(
         username=user.get_username(), password=user.get_password()
@@ -96,7 +90,4 @@ def test_get_wallet_with_api_key_of_other_user(
     api_key = core.register_user(
         username=user.get_username() + "a", password=user.get_password()
     ).api_key
-    assert (
-            core.get_wallet(api_key=api_key, address=address).status
-            == 403
-    )
+    assert core.get_wallet(api_key=api_key, address=address).status == 403
