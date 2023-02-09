@@ -275,18 +275,20 @@ class BitcoinWalletCore:
             return TransactionResponse(status=404)
         elif wallet.get_owner_id() != user_id:
             return TransactionResponse(status=403)
-        elif wallet.get_balance_in_btc() < amount_in_btc:
-            return TransactionResponse(status=400)
 
         fee: float = self._get_fee(
             sender_id=wallet.get_owner_id(),
             receiver_id=EXTERNAL_TRANSACTION_ID,
             amount=amount_in_btc,
         )
+
+        if wallet.get_balance_in_btc() < amount_in_btc + fee:
+            return TransactionResponse(status=400)
+
         self._transactions_interactor.make_transaction(
             from_address=address, to_address="WITHDRAW", amount=amount_in_btc, fee=fee
         )
-        self._wallets_interactor.withdraw(address, amount_in_btc - fee)
+        self._wallets_interactor.withdraw(address, amount_in_btc + fee)
         return TransactionResponse(status=201)
 
     def make_transaction(
@@ -305,8 +307,6 @@ class BitcoinWalletCore:
             return TransactionResponse(status=404)  # TODO
         elif sender.get_owner_id() != user_id:
             return TransactionResponse(status=403)
-        elif sender.get_balance_in_btc() < amount:
-            return TransactionResponse(status=400)
         elif receiver is None:
             return TransactionResponse(status=404)
         elif sender.get_address() == receiver.get_address():
@@ -318,13 +318,16 @@ class BitcoinWalletCore:
             amount=amount,
         )
 
+        if sender.get_balance_in_btc() < amount + fee:
+            return TransactionResponse(status=400)
+
         self._transactions_interactor.make_transaction(
             from_address, to_address, amount, fee
         )
-        self._wallets_interactor.withdraw(address=sender.get_address(), amount=amount)
-        self._wallets_interactor.deposit(
-            address=receiver.get_address(), amount=amount - fee
+        self._wallets_interactor.withdraw(
+            address=sender.get_address(), amount=amount + fee
         )
+        self._wallets_interactor.deposit(address=receiver.get_address(), amount=amount)
 
         return TransactionResponse(status=201)
 

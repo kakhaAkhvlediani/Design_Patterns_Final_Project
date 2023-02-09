@@ -287,7 +287,7 @@ def test_transaction_between_wallets(user: User, core: BitcoinWalletCore) -> Non
             api_key=user_response1.api_key + "wrong",
             from_address=wallet_response1.wallet_info["address"],
             to_address=wallet_response2.wallet_info["address"],
-            amount=1,
+            amount=0.5,
         ).status
         == 403
     )
@@ -296,7 +296,7 @@ def test_transaction_between_wallets(user: User, core: BitcoinWalletCore) -> Non
             api_key=user_response1.api_key,
             from_address=wallet_response1.wallet_info["address"] + "wrong",
             to_address=wallet_response2.wallet_info["address"],
-            amount=1,
+            amount=0.5,
         ).status
         == 404
     )
@@ -305,7 +305,7 @@ def test_transaction_between_wallets(user: User, core: BitcoinWalletCore) -> Non
             api_key=user_response2.api_key,
             from_address=wallet_response1.wallet_info["address"],
             to_address=wallet_response2.wallet_info["address"],
-            amount=1,
+            amount=0.5,
         ).status
         == 403
     )
@@ -314,7 +314,7 @@ def test_transaction_between_wallets(user: User, core: BitcoinWalletCore) -> Non
             api_key=user_response1.api_key,
             from_address=wallet_response1.wallet_info["address"],
             to_address=wallet_response2.wallet_info["address"] + "wrong",
-            amount=1,
+            amount=0.5,
         ).status
         == 404
     )
@@ -323,7 +323,7 @@ def test_transaction_between_wallets(user: User, core: BitcoinWalletCore) -> Non
             api_key=user_response1.api_key,
             from_address=wallet_response1.wallet_info["address"],
             to_address=wallet_response2.wallet_info["address"],
-            amount=1,
+            amount=0.5,
         ).status
         == 201
     )
