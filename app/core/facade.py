@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Protocol
 
-from starlette import status
-
 from app.core.api_key.interactor import APIKeyInteractor, IAPIKeysRepository
 from app.core.transactions.interactor import (
     ITransactionsRepository,
@@ -37,14 +35,12 @@ class ICurrencyConverter(Protocol):
 @dataclass
 class UserResponse:
     status: int
-    msg: str = ""
     api_key: str = ""
 
 
 @dataclass
 class WalletResponse:
     status: int
-    msg: str = ""
     wallet_info: Dict[str, Any] = field(default_factory=lambda: {})
     transactions: List[Dict[str, Any]] = field(default_factory=lambda: [])
 
@@ -52,13 +48,11 @@ class WalletResponse:
 @dataclass
 class TransactionResponse:
     status: int
-    msg: str
 
 
 @dataclass
 class StatisticsResponse:
     status: int
-    msg: str = ""
     platform_profit_in_btc: float = 0
     platform_profit_in_usd: float = 0
     total_number_of_transactions: int = 0
@@ -141,14 +135,14 @@ class BitcoinWalletCore:
             username=username, password=self._hash(password)
         )
         if user is None:
-            return UserResponse(status=status.HTTP_400_BAD_REQUEST, msg="Is Registered")
+            return UserResponse(status=400)
 
         self._api_key_interactor.add_api_key_id_pair(
             api_key=api_key, user_id=user.get_user_id()
         )
 
         return UserResponse(
-            status=status.HTTP_201_CREATED, msg="Registered", api_key=api_key
+            status=201, api_key=api_key
         )
 
     # Wallet RESPONSE
@@ -165,13 +159,12 @@ class BitcoinWalletCore:
 
         if user_id == -1:
             return WalletResponse(
-                status=status.HTTP_403_FORBIDDEN, msg="Invalid api_key"
+                status=403
             )
 
         if self._check_if_user_has_max_num_of_wallets(user_id=user_id):
             return WalletResponse(
-                status=status.HTTP_400_BAD_REQUEST,
-                msg="User has reached the max number of wallets",
+                status=400
             )
 
         wallet: Wallet = self._wallets_interactor.create_wallet(
@@ -186,8 +179,7 @@ class BitcoinWalletCore:
         )
 
         return WalletResponse(
-            status=status.HTTP_201_CREATED,
-            msg="Wallet created",
+            status=201,
             wallet_info=to_dict,
         )
 
@@ -196,17 +188,17 @@ class BitcoinWalletCore:
 
         if user_id == -1:
             return WalletResponse(
-                status=status.HTTP_403_FORBIDDEN, msg="Invalid api_key"
+                status=403
             )
 
         wallet: Optional[Wallet] = self._wallets_interactor.get_wallet(address=address)
         if wallet is None:
             return WalletResponse(
-                status=status.HTTP_404_NOT_FOUND, msg="No wallet with this address"
+                status=404
             )
         elif user_id != wallet.get_owner_id():
             return WalletResponse(
-                status=status.HTTP_403_FORBIDDEN, msg="Wrong api_key for this wallet"
+                status=403
             )
 
         to_dict: Dict[str, Any] = wallet.to_dict()
@@ -215,23 +207,23 @@ class BitcoinWalletCore:
         )
 
         return WalletResponse(
-            status=status.HTTP_200_OK, msg="Returning Wallet", wallet_info=to_dict
+            status=200, wallet_info=to_dict
         )
 
     def get_transactions_of_wallet(self, api_key: str, address: str) -> WalletResponse:
         user_id: int = self.get_user_id_by_api_key(api_key)
         if user_id == -1:
             return WalletResponse(
-                status=status.HTTP_403_FORBIDDEN, msg="Invalid api_key"
+                status=403
             )
 
         wallet: Optional[Wallet] = self._wallets_interactor.get_wallet(address=address)
         if wallet is None:
             return WalletResponse(
-                status=status.HTTP_404_NOT_FOUND, msg="Wallet not found"
+                status=404
             )
         elif wallet.get_owner_id() != user_id:
-            return WalletResponse(status=status.HTTP_403_FORBIDDEN, msg="Wrong api_key")
+            return WalletResponse(status=403)
 
         transactions: List[
             Transaction
@@ -241,8 +233,7 @@ class BitcoinWalletCore:
         ]
 
         return WalletResponse(
-            status=status.HTTP_200_OK,
-            msg="Transactions have been acquired",
+            status=200,
             transactions=transactions_to_send_back,
         )
 
@@ -260,11 +251,11 @@ class BitcoinWalletCore:
 
     def deposit(
             self, api_key: str, address: str, amount_in_usd: float
-    ) -> WalletResponse:
+    ) -> TransactionResponse:
         user_id: int = self.get_user_id_by_api_key(api_key)
         if user_id == -1:
-            return WalletResponse(
-                status=status.HTTP_403_FORBIDDEN, msg="Invalid api_key"
+            return TransactionResponse(
+                status=403
             )
 
         amount_in_btc: float = self._currency_converter.convert_to_btc(
@@ -273,11 +264,11 @@ class BitcoinWalletCore:
 
         wallet: Optional[Wallet] = self._wallets_interactor.get_wallet(address=address)
         if wallet is None:
-            return WalletResponse(  # TODO
-                status=status.HTTP_404_NOT_FOUND, msg="Wallet not found"
+            return TransactionResponse(  # TODO
+                status=404
             )
         elif wallet.get_owner_id() != user_id:  # TODO
-            return WalletResponse(status=status.HTTP_403_FORBIDDEN, msg="Wrong api_key")
+            return TransactionResponse(status=403)
 
         fee: float = self._get_fee(
             sender_id=EXTERNAL_TRANSACTION_ID,
@@ -289,18 +280,17 @@ class BitcoinWalletCore:
         )
 
         self._wallets_interactor.deposit(address, amount_in_btc - fee)
-        return WalletResponse(
-            status=status.HTTP_201_CREATED,
-            msg="Deposit was made",
+        return TransactionResponse(
+            status=201
         )
 
     def withdraw(
             self, api_key: str, address: str, amount_in_usd: float
-    ) -> WalletResponse:
+    ) -> TransactionResponse:
         user_id: int = self.get_user_id_by_api_key(api_key)
         if user_id == -1:
-            return WalletResponse(
-                status=status.HTTP_403_FORBIDDEN, msg="Invalid api_key"
+            return TransactionResponse(
+                status=403
             )
 
         amount_in_btc: float = self._currency_converter.convert_to_btc(
@@ -308,14 +298,14 @@ class BitcoinWalletCore:
         )
         wallet: Optional[Wallet] = self._wallets_interactor.get_wallet(address=address)
         if wallet is None:
-            return WalletResponse(
-                status=status.HTTP_404_NOT_FOUND, msg="Wallet not found"
+            return TransactionResponse(
+                status=404
             )
         elif wallet.get_owner_id() != user_id:
-            return WalletResponse(status=status.HTTP_403_FORBIDDEN, msg="Wrong api_key")
+            return TransactionResponse(status=403)
         elif wallet.get_balance_in_btc() < amount_in_btc:
-            return WalletResponse(
-                status=status.HTTP_400_BAD_REQUEST, msg="Insufficient funds"
+            return TransactionResponse(
+                status=400
             )
 
         fee: float = self._get_fee(
@@ -327,9 +317,8 @@ class BitcoinWalletCore:
             from_address=address, to_address="WITHDRAW", amount=amount_in_btc, fee=fee
         )
         self._wallets_interactor.withdraw(address, amount_in_btc - fee)
-        return WalletResponse(
-            status=status.HTTP_201_CREATED,
-            msg="Withdrawal was made",
+        return TransactionResponse(
+            status=201
         )
 
     def make_transaction(
@@ -338,7 +327,7 @@ class BitcoinWalletCore:
         user_id: int = self.get_user_id_by_api_key(api_key)
         if user_id == -1:
             return TransactionResponse(  # TODO
-                status=status.HTTP_403_FORBIDDEN, msg="Invalid api_key"
+                status=403
             )
         sender: Optional[Wallet] = self._wallets_interactor.get_wallet(
             address=from_address
@@ -348,24 +337,23 @@ class BitcoinWalletCore:
         )
         if sender is None:
             return TransactionResponse(  # TODO
-                status=status.HTTP_404_NOT_FOUND, msg="Wrong sender_address"
+                status=404
             )
         elif sender.get_owner_id() != user_id:
             return TransactionResponse(  # TODO
-                status=status.HTTP_403_FORBIDDEN, msg="Wrong api_key"
+                status=403
             )
         elif sender.get_balance_in_btc() < amount:
             return TransactionResponse(
-                status=status.HTTP_400_BAD_REQUEST, msg="Insufficient funds"
+                status=400
             )
         elif receiver is None:
             return TransactionResponse(  # TODO
-                status=status.HTTP_404_NOT_FOUND, msg="Wrong receiver_address"
+                status=404
             )
         elif sender.get_address() == receiver.get_address():
             return TransactionResponse(
-                status=status.HTTP_403_FORBIDDEN,
-                msg="Transaction to the same wallet is impossible",
+                status=403
             )
 
         fee: float = self._get_fee(
@@ -383,14 +371,14 @@ class BitcoinWalletCore:
         )
 
         return TransactionResponse(
-            status=status.HTTP_201_CREATED, msg="Transaction was made"
+            status=201
         )
 
     # STATISTICS RESPONSE
     def get_statistics(self, admin_api_key: str) -> StatisticsResponse:
         if admin_api_key != ADMIN_API_KEY:
             return StatisticsResponse(
-                status=status.HTTP_403_FORBIDDEN, msg="Wrong admin_api_key"
+                status=403
             )
         transactions: List[
             Transaction
@@ -403,7 +391,7 @@ class BitcoinWalletCore:
             platform_profit += transaction.get_fee()
 
         return StatisticsResponse(
-            status=status.HTTP_200_OK,
+            status=200,
             platform_profit_in_btc=platform_profit,
             platform_profit_in_usd=self._currency_converter.convert_to_usd(
                 amount_in_btc=platform_profit

@@ -1,5 +1,4 @@
 import pytest
-from starlette import status
 
 from app.core.facade import BitcoinWalletCore, UserResponse, WalletResponse
 from app.core.users.interactor import User
@@ -141,7 +140,7 @@ def test_deposit_neg_wrong_api_key_deposit(user: User, core: BitcoinWalletCore) 
                 address=wallet_response.wallet_info["address"],
                 amount_in_usd=1000,
             ).status
-            == status.HTTP_403_FORBIDDEN
+            == 403
     )
 
     wallet_response = core.get_wallet(
@@ -166,7 +165,7 @@ def test_withdraw_neg_wrong_api_key(
                 address=wallet_response.wallet_info["address"],
                 amount_in_usd=25,
             ).status
-            == status.HTTP_403_FORBIDDEN
+            == 403
     )
 
     wallet_response = core.get_wallet(
@@ -190,7 +189,7 @@ def test_withdraw_neg_wrong_wallet_address(
                 address=wallet_response.wallet_info["address"] + "2",
                 amount_in_usd=25,
             ).status
-            == status.HTTP_404_NOT_FOUND
+            == 404
     )
 
     wallet_response = core.get_wallet(
@@ -217,7 +216,7 @@ def test_withdraw_neg_wrong_owner_key(
                 address=wallet_response.wallet_info["address"],
                 amount_in_usd=25,
             ).status
-            == status.HTTP_403_FORBIDDEN
+            == 403
     )
 
     wallet_response = core.get_wallet(
