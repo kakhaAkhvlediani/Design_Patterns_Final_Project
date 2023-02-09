@@ -215,14 +215,14 @@ class BitcoinWalletCore:
         if user_id == -1:
             return WalletResponse(
                 status=403
-            )
+            )  # TODO non-existent api_Key
 
         wallet: Optional[Wallet] = self._wallets_interactor.get_wallet(address=address)
         if wallet is None:
             return WalletResponse(
                 status=404
-            )
-        elif wallet.get_owner_id() != user_id:
+            )  # TODO RIGHT API KEY, WRONG ADDRESS
+        elif wallet.get_owner_id() != user_id:  # TODO Existing api key, existing wallet but api key is of other user
             return WalletResponse(status=403)
 
         transactions: List[
@@ -247,7 +247,7 @@ class BitcoinWalletCore:
             return amount * self._fee_strategy.get_fee_rate_for_withdraw()
         return (
                 amount * self._fee_strategy.get_fee_rate_for_different_owners()
-        )  # TODO transaction from one users wallet to another users wallet
+        )
 
     def deposit(
             self, api_key: str, address: str, amount_in_usd: float
@@ -264,10 +264,10 @@ class BitcoinWalletCore:
 
         wallet: Optional[Wallet] = self._wallets_interactor.get_wallet(address=address)
         if wallet is None:
-            return TransactionResponse(  # TODO
+            return TransactionResponse(
                 status=404
             )
-        elif wallet.get_owner_id() != user_id:  # TODO
+        elif wallet.get_owner_id() != user_id:
             return TransactionResponse(status=403)
 
         fee: float = self._get_fee(
@@ -340,7 +340,7 @@ class BitcoinWalletCore:
                 status=404
             )
         elif sender.get_owner_id() != user_id:
-            return TransactionResponse(  # TODO
+            return TransactionResponse(
                 status=403
             )
         elif sender.get_balance_in_btc() < amount:
@@ -348,7 +348,7 @@ class BitcoinWalletCore:
                 status=400
             )
         elif receiver is None:
-            return TransactionResponse(  # TODO
+            return TransactionResponse(
                 status=404
             )
         elif sender.get_address() == receiver.get_address():
