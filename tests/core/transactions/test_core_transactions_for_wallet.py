@@ -224,3 +224,114 @@ def test_withdraw_neg_wrong_owner_key(
     )
 
     assert wallet_response.wallet_info["balance_in_btc"] == 1
+
+
+def test_deposit_neg_wrong_wallet_address(
+        user: User, core: BitcoinWalletCore
+) -> None:
+    user_response: UserResponse = core.register_user(
+        username=user.get_username() + "a", password=user.get_password()
+    )
+    wallet_response: WalletResponse = core.create_wallet(api_key=user_response.api_key)
+
+    assert (
+            core.deposit(
+                api_key=user_response.api_key,
+                address=wallet_response.wallet_info["address"] + "2",
+                amount_in_usd=25,
+            ).status
+            == 404
+    )
+
+    wallet_response = core.get_wallet(
+        user_response.api_key, wallet_response.wallet_info["address"]
+    )
+
+    assert wallet_response.wallet_info["balance_in_btc"] == 1
+
+
+def test_deposit_neg_wrong_owner_key(
+        user: User, core: BitcoinWalletCore
+) -> None:
+    api_key: str = core.register_user(
+        username=user.get_username() + "a", password=user.get_password()
+    ).api_key
+    user_response: UserResponse = core.register_user(
+        username=user.get_username(), password=user.get_password()
+    )
+    wallet_response: WalletResponse = core.create_wallet(api_key=user_response.api_key)
+
+    assert (
+            core.deposit(
+                api_key=api_key,
+                address=wallet_response.wallet_info["address"],
+                amount_in_usd=25,
+            ).status
+            == 403
+    )
+
+    wallet_response = core.get_wallet(
+        user_response.api_key, wallet_response.wallet_info["address"]
+    )
+
+    assert wallet_response.wallet_info["balance_in_btc"] == 1
+
+
+def test_transaction_between_wallets(
+        user: User, core: BitcoinWalletCore
+) -> None:
+    user_response1: UserResponse = core.register_user(
+        username=user.get_username() + "a", password=user.get_password()
+    )
+    wallet_response1: WalletResponse = core.create_wallet(api_key=user_response1.api_key)
+
+    user_response2: UserResponse = core.register_user(
+        username=user.get_username() + "b", password=user.get_password()
+    )
+    wallet_response2: WalletResponse = core.create_wallet(api_key=user_response2.api_key)
+
+    assert (
+            core.make_transaction(
+                api_key=user_response1.api_key + "wrong",
+                from_address=wallet_response1.wallet_info["address"],
+                to_address=wallet_response2.wallet_info["address"],
+                amount=1,
+            ).status
+            == 403
+    )
+    assert (
+            core.make_transaction(
+                api_key=user_response1.api_key,
+                from_address=wallet_response1.wallet_info["address"] + "wrong",
+                to_address=wallet_response2.wallet_info["address"],
+                amount=1,
+            ).status
+            == 404
+    )
+    assert (
+            core.make_transaction(
+                api_key=user_response2.api_key,
+                from_address=wallet_response1.wallet_info["address"],
+                to_address=wallet_response2.wallet_info["address"],
+                amount=1,
+            ).status
+            == 403
+    )
+    assert (
+            core.make_transaction(
+                api_key=user_response1.api_key,
+                from_address=wallet_response1.wallet_info["address"],
+                to_address=wallet_response2.wallet_info["address"] + "wrong",
+                amount=1,
+            ).status
+            == 404
+    )
+    assert (
+            core.make_transaction(
+                api_key=user_response1.api_key,
+                from_address=wallet_response1.wallet_info["address"],
+                to_address=wallet_response2.wallet_info["address"],
+                amount=1,
+            ).status
+            == 201
+    )
