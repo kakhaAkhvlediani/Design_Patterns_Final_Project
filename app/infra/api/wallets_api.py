@@ -25,6 +25,10 @@ wallets_api: APIRouter = APIRouter()
 status_translator: Dict[int, Any] = {
     200: {"status_code": status.HTTP_200_OK, "msg": "Wallet Returned"},
     201: {"status_code": status.HTTP_201_CREATED, "msg": "Wallet Created"},
+    400: {
+            "status_code": status.HTTP_400_BAD_REQUEST,
+            "msg": "You can create maximum 3 wallets",
+        },
     403: {
         "status_code": status.HTTP_403_FORBIDDEN,
         "msg": "Wrong api_key for this wallet",
