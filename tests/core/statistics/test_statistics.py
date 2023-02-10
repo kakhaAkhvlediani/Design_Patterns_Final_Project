@@ -6,6 +6,7 @@ from app.core.facade import (
     UserResponse,
     WalletResponse,
 )
+from app.core.transactions.interactor import Transaction
 from app.core.users.interactor import User
 from app.infra.in_memory.in_memory_api_key_repository import InMemoryAPIKeyRepository
 from app.infra.in_memory.in_memory_transactions_repository import (
@@ -64,9 +65,7 @@ def test_deposit_and_statistics(user1: User, core: BitcoinWalletCore) -> None:
         username=user1.get_username(), password=user1.get_password()
     ).api_key
     address: str = core.create_wallet(api_key=api_key).wallet_info["address"] or ""
-    core.deposit(
-        api_key=api_key, address=address, amount_in_usd=1000
-    )  # TODO IT'S OWN TEST CASE
+    core.deposit(api_key=api_key, address=address, amount_in_usd=1000)
 
     statistics_response: StatisticsResponse = core.get_statistics(
         admin_api_key="admin_api_key"
@@ -187,7 +186,6 @@ def test_deposit_and_transaction_to_different_wallet_of_same_user(
     assert statistics_response.total_number_of_transactions == 1
 
 
-# TODO Add negative cases
 def test_transaction_to_other_user_wallet_neg_no_funds(
     user1: User, user2: User, core: BitcoinWalletCore
 ) -> None:
@@ -263,21 +261,45 @@ def test_get_transactions(user1: User, user2: User, core: BitcoinWalletCore) -> 
         api_key=user_response2.api_key
     )
 
+    transaction1: Transaction = Transaction(
+        from_address="DEPOSIT",
+        to_address=wallet_response1.wallet_info["address"],
+        amount=currency_converter.convert_to_btc(amount_in_usd=100),
+        fee=float(
+            fee_strategy.get_fee_rate_for_deposit()
+            * currency_converter.convert_to_btc(amount_in_usd=100)
+        ),
+    )
     core.deposit(
         api_key=user_response1.api_key,
         address=wallet_response1.wallet_info["address"],
         amount_in_usd=100,
+    )
+    transaction2: Transaction = Transaction(
+        from_address=wallet_response1.wallet_info["address"],
+        to_address="WITHDRAW",
+        amount=currency_converter.convert_to_btc(amount_in_usd=50),
+        fee=float(
+            fee_strategy.get_fee_rate_for_withdraw()
+            * currency_converter.convert_to_btc(amount_in_usd=100)
+        ),
     )
     core.withdraw(
         api_key=user_response1.api_key,
         address=wallet_response1.wallet_info["address"],
         amount_in_usd=50,
     )
+    transaction3: Transaction = Transaction(
+        from_address=wallet_response1.wallet_info["address"],
+        to_address=wallet_response2.wallet_info["address"],
+        amount=0.3,
+        fee=float(fee_strategy.get_fee_rate_for_different_owners() * 0.3),
+    )
     core.make_transaction(
         api_key=user_response1.api_key,
         from_address=wallet_response1.wallet_info["address"],
         to_address=wallet_response2.wallet_info["address"],
-        amount=1,
+        amount=0.3,
     )
 
     assert (
@@ -309,3 +331,11 @@ def test_get_transactions(user1: User, user2: User, core: BitcoinWalletCore) -> 
         ).status
         == 200
     )
+    assert core.get_transactions_of_wallet(
+        api_key=user_response1.api_key,
+        address=wallet_response1.wallet_info["address"],
+    ).transactions == [
+        transaction1.to_dict(),
+        transaction2.to_dict(),
+        transaction3.to_dict(),
+    ]
